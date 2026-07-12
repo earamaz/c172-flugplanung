@@ -744,7 +744,7 @@ function legRow(d={}){
     <td><input class="dist" value="${d.dist||""}" oninput="recalc()" style="width:48px"></td>
     <td class="wca"></td><td class="calc mh"></td><td class="gs"></td>
     <td class="ete"></td><td class="acc"></td><td class="accd"></td><td class="eto"></td>
-    <td class="atocol"><input class="ato" value="${d.ato||""}" oninput="persist()" placeholder="––:––"></td>
+    <td class="atocol"><input class="ato" value="${d.ato||""}" oninput="persist()"></td>
     <td class="noprint"><button class="rm" onclick="this.closest('tr').remove();recalc()">✕</button></td>`;
   return tr;
 }
