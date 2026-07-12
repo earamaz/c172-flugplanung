@@ -1192,11 +1192,21 @@ function seedDemo(){
   ].forEach(d=>$("navbody").appendChild(legRow(d)));
 }
 function newFlight(){
-  if(!confirm("Neuen Flug beginnen? Aktuelle Eingaben werden geleert (Profile bleiben)."))return;
-  ["from","to","altn","pic","co","tot","offblk","landing","onblk"].forEach(k=>$(k).value="");
+  if(!confirm("Neuen Flug beginnen? ALLE Felder werden geleert (nur Flugzeug-Auswahl & Flugzeugprofile bleiben)."))return;
+  // JEDES Eingabefeld im Tool leeren (Login-Overlay liegt außerhalb .wrap)
+  document.querySelectorAll(".wrap input, .wrap textarea").forEach(el=>{
+    if(el.readOnly) return;                         // berechnete Felder (werden neu gerechnet)
+    if(el.id && el.id.indexOf("e_")===0) return;    // Flugzeugprofil-Editor nicht anfassen
+    el.value="";
+  });
+  document.querySelectorAll(".wrap select").forEach(sel=>{
+    if(sel.id==="ac"||sel.id==="profSel") return;   // Flugzeug + Profil-Auswahl behalten
+    sel.selectedIndex=0;                            // Belag -> Standard (Asphalt)
+  });
   createdAt=new Date().toISOString(); updateCreatedDisp();
   setActive(null);   // neuer Flug ist noch keinem gespeicherten Plan zugeordnet
-  $("navbody").innerHTML="";addLeg();recalc();
+  $("navbody").innerHTML=""; addLeg();
+  fillProfEditor(); loadAircraft(); recalc();
 }
 
 // init
