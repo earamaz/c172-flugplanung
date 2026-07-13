@@ -581,9 +581,9 @@ const DEFAULTS = {
   "D-EWAU":{reg:"D-EWAU",type:"C172R",perf:"R",oem:751,oemArm:0.985,mtom:1111,mlm:1111,mrm:1114,
     fuelCap:212,fuelUnus:12,dens:0.72,ff:35,spd:100,
     fwd:[[700,0.889],[885,0.889],[1111,1.016]],aft:1.201},
-  "D-EAZL":{reg:"D-EAZL",type:"C172S",perf:"S",oem:756.1,oemArm:1.1296,mtom:1156.66,mlm:1156.66,mrm:1160.5,
+  "D-EAZL":{reg:"D-EAZL",type:"C172S",perf:"S",oem:783.5,oemArm:1.1296,mtom:1111,mlm:1111,mrm:1114,
     fuelCap:212,fuelUnus:12,dens:0.72,ff:35,spd:100,
-    fwd:[[700,0.889],[884.5,0.889],[1156.66,1.041]],aft:1.201}
+    fwd:[[700,0.889],[885,0.889],[1111,1.016]],aft:1.201}
 };
 const ARM={front:0.939,rear:1.854,c1:2.413,c2:3.120,fuel:1.219};
 const KEY="c172planner.v1";
@@ -1214,7 +1214,12 @@ function saveState(){
 }
 function flash(t){const b=document.querySelector(".toolbar .primary");const o=b.textContent;b.textContent=t;setTimeout(()=>b.textContent=o,1200);}
 function applyState(s){
-  if(s&&s.prof)PROF=Object.assign(structuredClone(DEFAULTS),s.prof);
+  // Flugzeug-Stammdaten (Leermasse, MTOM, CG-Hüllkurve …) sind AUTORITATIV aus DEFAULTS (Code).
+  // Ältere, in Plänen gespeicherte Profil-Snapshots dürfen sie NICHT überschreiben
+  // (sonst käme z.B. beim Laden eines alten Plans die veraltete Leermasse zurück).
+  // Selbst hinzugefügte Profile (Keys, die es in DEFAULTS nicht gibt) bleiben erhalten.
+  if(s&&s.prof)PROF=Object.assign(structuredClone(s.prof),structuredClone(DEFAULTS));
+  else PROF=structuredClone(DEFAULTS);
   // backfill perf flag for profiles saved before this field existed
   Object.values(PROF).forEach(p=>{if(!p.perf)p.perf=(""+p.type).toUpperCase().includes("172R")?"R":"S";});
   fillAcSelect();
