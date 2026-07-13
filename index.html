@@ -147,6 +147,31 @@
     #nav,#nav tr,#nav td,#nav th{break-inside:auto}
     .auth-overlay{display:none!important}
   }
+  /* ===== Kniebrett-Druck: A5 hoch, nur Navlog + Frequenzen + ATIS ===== */
+  @media print{
+    body.kb .card{display:none!important}
+    body.kb .card.kb-keep{display:block!important;break-inside:auto}
+    body.kb .kb-hide{display:none!important}
+    body.kb .print-first,body.kb .print-break{break-after:auto;break-before:auto}
+    body.kb header{margin-bottom:4px;padding:2px 6px}
+    body.kb h1{font-size:12px}
+    body.kb h2{font-size:9px;margin:0 0 3px}
+    body.kb #nav{font-size:8px;table-layout:auto}
+    body.kb #nav th,body.kb #nav td{padding:1px 2px}
+    body.kb #nav td{height:26px}                 /* hoch genug zum Reinschreiben */
+    body.kb #nav th.atocol,body.kb #nav td.atocol{min-width:0;width:auto}
+    body.kb #nav .ato{width:64px}
+    /* auf dem Kniebrett weggelassene Spalten: Freq(2) Wind(6) VAR(7) TAS(8) WCA(10) ΣZeit(14) */
+    body.kb #nav th:nth-child(2),body.kb #nav td:nth-child(2),
+    body.kb #nav th:nth-child(6),body.kb #nav td:nth-child(6),
+    body.kb #nav th:nth-child(7),body.kb #nav td:nth-child(7),
+    body.kb #nav th:nth-child(8),body.kb #nav td:nth-child(8),
+    body.kb #nav th:nth-child(10),body.kb #nav td:nth-child(10),
+    body.kb #nav th:nth-child(14),body.kb #nav td:nth-child(14){display:none!important}
+    body.kb #freqTable{font-size:8px}
+    body.kb #freqTable th,body.kb #freqTable td{padding:2px 3px}
+    body.kb #atis,body.kb #enroute{min-height:56px}
+  }
   /* --- Login-Overlay (Firebase) --- */
   .auth-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
   .auth-box{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px;text-align:center}
@@ -161,6 +186,8 @@
   .auth-err{color:var(--bad);font-size:13px;min-height:18px;margin-top:10px}
   .auth-foot{color:var(--muted);font-size:11px;margin-top:16px;opacity:.7}
 </style>
+<!-- Wird beim Kniebrett-Druck per JS auf A5 hoch gesetzt; sonst leer -> A4 quer (Standard) -->
+<style id="kbPage" media="print"></style>
 </head>
 <body>
 <div id="authOverlay" class="auth-overlay" style="display:none">
@@ -188,7 +215,8 @@
     <div class="toolbar noprint">
       <button id="themeBtn" onclick="toggleTheme()" title="Hell/Dunkel">🌙 Dunkel</button>
       <button onclick="newFlight()">Neuer Flug</button>
-      <button onclick="window.print()">🖨 Drucken / PDF</button>
+      <button onclick="window.print()">🖨 Drucken / PDF (A4)</button>
+      <button onclick="printKneeboard()" title="Kompaktes A5-Blatt fürs Kniebrett: Navlog + Frequenzen + ATIS, mit ETO/ATO zum Reinschreiben">📋 Kniebrett (A5)</button>
       <button class="primary" onclick="saveState()">💾 Speichern</button>
     </div>
   </header>
@@ -230,7 +258,7 @@
   </div>
 
   <!-- NAVLOG -->
-  <div class="card">
+  <div class="card kb-keep">
     <h2>Navigation Log</h2>
     <div class="navwrap">
       <table id="nav">
@@ -249,8 +277,8 @@
     </div>
     <button class="addbtn noprint" onclick="addLeg()">+ Wegpunkt</button>
     <button class="addbtn noprint" onclick="invertFlight()" title="Route umkehren für den Rückflug" style="margin-left:8px">⇄ Rückflug</button>
-    <div class="sub" style="margin-top:14px">🛬 Ausweich (Alternate): <span id="altnRoute" class="mini"></span></div>
-    <div class="navwrap">
+    <div class="sub kb-hide" style="margin-top:14px">🛬 Ausweich (Alternate): <span id="altnRoute" class="mini"></span></div>
+    <div class="navwrap kb-hide">
       <table id="altTable">
         <thead><tr>
           <th>MC<br>°</th><th>Alt<br>ft</th><th>Wind<br>°/kt</th><th>TAS<br>kt</th><th>Dist<br>NM</th>
@@ -266,8 +294,8 @@
         </tr></tbody>
       </table>
     </div>
-    <div class="note">Ausweich-Leg (Ziel → Ausweichplatz), MC = missweisender Kurs. Für die Sprit-Reserve werden mind. 10 min angesetzt (wie LBA/Excel).</div>
-    <div class="row r3" style="margin-top:12px">
+    <div class="note kb-hide">Ausweich-Leg (Ziel → Ausweichplatz), MC = missweisender Kurs. Für die Sprit-Reserve werden mind. 10 min angesetzt (wie LBA/Excel).</div>
+    <div class="row r3 kb-hide" style="margin-top:12px">
       <div class="field"><label>Zuschlag Platzrunde/Approach (min)</label><input id="apprMin" value="10" oninput="recalc()"></div>
       <div class="field"><label>Gesamt-Flugzeit (Trip)</label><input id="tripTime" class="calc" readonly></div>
       <div class="field"><label>Gesamt-Distanz</label><input id="totDist" class="calc" readonly></div>
@@ -275,7 +303,7 @@
   </div>
 
   <!-- FREQUENCIES -->
-  <div class="card">
+  <div class="card kb-keep">
     <h2>Frequenzen</h2>
     <table id="freqTable">
       <thead><tr>
@@ -309,7 +337,7 @@
   </div>
 
   <!-- ATIS / CLEARANCES -->
-  <div class="card print-first">
+  <div class="card print-first kb-keep">
     <div class="field" style="margin-bottom:10px">
       <label>GAFOR — Gebiete entlang der Strecke (eine Zeile je Gebiet)</label>
       <textarea id="gafor" oninput="persist()" style="min-height:54px" placeholder="z.B.&#10;33 Ruhrgebiet/OWF: C (frei)&#10;07 Westl. Niedersachsen: O (offen, ISOL RADZ)"></textarea>
@@ -753,6 +781,16 @@ function legRow(d={}){
   return tr;
 }
 function addLeg(d){$("navbody").appendChild(legRow(d));recalc();}
+// Kniebrett-Druck: A5 hoch, nur Navlog (reduziert) + Frequenzen + ATIS
+function printKneeboard(){
+  document.body.classList.add("kb");
+  var pg=$("kbPage"); if(pg) pg.textContent="@page{size:A5 portrait;margin:7mm}";
+  window.print();
+}
+window.addEventListener("afterprint",function(){
+  document.body.classList.remove("kb");
+  var pg=$("kbPage"); if(pg) pg.textContent="";
+});
 // Rückflug: Route umkehren. Kurse +180°, Wind/VAR/TAS bleiben (Wind ist ortsfest!),
 // Von/Nach + Platzdaten (Start/Landung) getauscht, Zeiten geleert.
 function invertFlight(){
