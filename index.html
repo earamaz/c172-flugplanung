@@ -87,6 +87,10 @@
   .pdel{color:#ff8f8f}
   .planactive{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
   .activebadge{color:var(--accent);font-weight:700}
+  .folderhead{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;
+    padding:7px 10px;margin:8px 0 4px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-weight:600;font-size:13px}
+  .folderhead:hover{border-color:var(--accent2)}
+  .folderbody{padding-left:10px;border-left:2px solid var(--line);margin-left:4px}
   .addbtn{margin-top:8px}
   .tag{font-size:11px;color:var(--muted)}
   details summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
@@ -1147,7 +1151,12 @@ function restore(){
 // ---------- Plan-Bibliothek (benannte Pläne mit Zeitstempel) ----------
 const PLANS_KEY="c172planner.plans", ACTIVE_KEY="c172planner.active";
 let activePlanId=localStorage.getItem(ACTIVE_KEY)||null;   // welcher Plan wird von „Speichern" überschrieben
+let lastFolder="";                                         // zuletzt benutzter Ordner (Vorschlag beim Speichern)
 function setActive(id){activePlanId=id||null; if(id)localStorage.setItem(ACTIVE_KEY,id); else localStorage.removeItem(ACTIVE_KEY); renderPlans();}
+function getCollapsed(){try{return JSON.parse(localStorage.getItem("c172planner.collapsed"))||[];}catch(e){return[];}}
+function toggleFolder(name){let c=getCollapsed(); c=c.includes(name)?c.filter(x=>x!==name):c.concat([name]); localStorage.setItem("c172planner.collapsed",JSON.stringify(c)); renderPlans();}
+function askFolder(cur){let f=prompt("Ordner (optional — z.B. Datum oder Trip; leer = kein Ordner):", cur||lastFolder||""); if(f===null)return null; f=f.trim(); lastFolder=f; return f;}
+function movePlan(id){const a=loadPlans(),p=a.find(x=>x.id===id); if(!p)return; const f=askFolder(p.folder); if(f===null)return; p.folder=f; savePlansArr(a); renderPlans();}
 function loadPlans(){try{return JSON.parse(localStorage.getItem(PLANS_KEY))||[];}catch(e){return[];}}
 function savePlansArr(a){localStorage.setItem(PLANS_KEY,JSON.stringify(a));}
 function escHtml(s){return (s==null?"":s+"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -1157,22 +1166,43 @@ function savePlanAs(){
   const def=from+" → "+to;
   let name=prompt("Plan speichern als:", def); if(name===null)return;
   name=name.trim()||def;
+  const folder=askFolder(""); if(folder===null)return;
   const a=loadPlans();
-  const entry={id:String(Date.now()),name,from,to,ac,savedAt:new Date().toISOString(),state:collect()};
+  const entry={id:String(Date.now()),name,folder,from,to,ac,savedAt:new Date().toISOString(),state:collect()};
   const idx=a.findIndex(p=>(p.name||"").toLowerCase()===name.toLowerCase());
   if(idx>=0){ if(!confirm("Plan „"+name+"“ existiert schon — überschreiben?"))return; entry.id=a[idx].id; a[idx]=entry; }
   else a.push(entry);
-  a.sort((x,y)=>(y.savedAt||"").localeCompare(x.savedAt||""));  // neueste zuerst
   savePlansArr(a); setActive(entry.id); flash("Plan gespeichert ✓");
+}
+function planRowHtml(p){
+  return `<div class="planrow${p.id===activePlanId?' planactive':''}">
+    <div><b>${escHtml(p.name)}</b> ${p.id===activePlanId?'<span class="mini activebadge">● aktiv</span>':''} <span class="mini">· ${escHtml((p.from||"?")+"→"+(p.to||"?"))} · ${escHtml(p.ac||"")}</span><br>
+      <span class="mini">zuletzt gespeichert: ${fmtWhen(p.savedAt)}</span></div>
+    <div class="planbtns"><button onclick="loadPlan('${p.id}')">Laden</button><button title="In Ordner verschieben" onclick="movePlan('${p.id}')">📁</button><button class="pdel" onclick="deletePlan('${p.id}')">🗑</button></div>
+  </div>`;
 }
 function renderPlans(){
   const a=loadPlans(), box=$("plansList"); if(!box)return;
   if(!a.length){box.innerHTML='<div class="mini">Noch keine Pläne gespeichert. Aktuellen Plan mit „＋ Aktuellen Plan speichern" ablegen.</div>';return;}
-  box.innerHTML=a.map(p=>`<div class="planrow${p.id===activePlanId?' planactive':''}">
-    <div><b>${escHtml(p.name)}</b> ${p.id===activePlanId?'<span class="mini activebadge">● aktiv</span>':''} <span class="mini">· ${escHtml((p.from||"?")+"→"+(p.to||"?"))} · ${escHtml(p.ac||"")}</span><br>
-      <span class="mini">zuletzt gespeichert: ${fmtWhen(p.savedAt)}</span></div>
-    <div class="planbtns"><button onclick="loadPlan('${p.id}')">Laden</button><button class="pdel" onclick="deletePlan('${p.id}')">🗑</button></div>
-  </div>`).join("");
+  // nach Ordner gruppieren
+  const groups={};
+  a.forEach(p=>{const f=(p.folder||"").trim(); (groups[f]=groups[f]||[]).push(p);});
+  Object.values(groups).forEach(g=>g.sort((x,y)=>(y.savedAt||"").localeCompare(x.savedAt||"")));
+  // Ordner-Reihenfolge: neuester Plan im Ordner zuerst; „ohne Ordner" (leer) ans Ende
+  const names=Object.keys(groups).sort((f1,f2)=>{
+    if(f1==="")return 1; if(f2==="")return -1;
+    return (groups[f2][0].savedAt||"").localeCompare(groups[f1][0].savedAt||"");
+  });
+  const collapsed=getCollapsed();
+  // Wenn es keine echten Ordner gibt -> einfach flach anzeigen (kein „ohne Ordner"-Kopf)
+  if(names.length===1 && names[0]===""){ box.innerHTML=groups[""].map(planRowHtml).join(""); return; }
+  box.innerHTML=names.map(f=>{
+    const list=groups[f], isCol=collapsed.includes(f);
+    const label=f?("📁 "+escHtml(f)):"📄 Ohne Ordner";
+    return `<div class="folderhead" data-f="${escHtml(f)}" onclick="toggleFolder(this.dataset.f)">
+      <span>${isCol?"▸":"▾"} ${label}</span><span class="mini">${list.length}</span></div>`
+      + (isCol?"":`<div class="folderbody">${list.map(planRowHtml).join("")}</div>`);
+  }).join("");
 }
 function loadPlan(id){
   const p=loadPlans().find(x=>x.id===id); if(!p)return;
@@ -1250,10 +1280,11 @@ renderPlans();
     const def=from+" → "+to;
     let name=prompt("Plan speichern als:",def); if(name===null)return;
     name=name.trim()||def;
+    const folder=askFolder(""); if(folder===null)return;
     const existing=PLANS.find(p=>(p.name||"").toLowerCase()===name.toLowerCase());
     if(existing && !confirm("Plan „"+name+"“ existiert schon — überschreiben?"))return;
     const id=existing?existing.id:String(Date.now());
-    try{ await plansCol.doc(id).set({name,from,to,ac,savedAt:new Date().toISOString(),state:JSON.stringify(collect())});
+    try{ await plansCol.doc(id).set({name,folder,from,to,ac,savedAt:new Date().toISOString(),state:JSON.stringify(collect())});
       setActive(id); flash("Plan gespeichert ✓"); }
     catch(e){ alert("Speichern fehlgeschlagen: "+(e&&e.message)); }
   }
@@ -1262,7 +1293,7 @@ renderPlans();
     if(!activePlanId){ flash("Gespeichert ✓"); return; }
     const p=PLANS.find(x=>x.id===activePlanId);
     if(!p){ flash("Gespeichert ✓"); return; }
-    try{ await plansCol.doc(activePlanId).set({name:p.name,
+    try{ await plansCol.doc(activePlanId).set({name:p.name, folder:p.folder||"",
         from:($("from").value||"?").toUpperCase(), to:($("to").value||"?").toUpperCase(), ac:$("ac").value,
         savedAt:new Date().toISOString(), state:JSON.stringify(collect())});
       flash("Plan aktualisiert ✓"); }
@@ -1280,10 +1311,16 @@ renderPlans();
     try{ await plansCol.doc(id).delete(); if(activePlanId===id)setActive(null); }
     catch(e){ alert("Löschen fehlgeschlagen: "+(e&&e.message)); }
   }
+  async function fbMovePlan(id){
+    const p=PLANS.find(x=>x.id===id); if(!p)return;
+    const f=askFolder(p.folder); if(f===null)return;
+    try{ await plansCol.doc(id).update({folder:f}); }
+    catch(e){ alert("Verschieben fehlgeschlagen: "+(e&&e.message)); }
+  }
 
   function activateCloud(user){
     plansCol=db.collection("c172Plans").doc(user.uid).collection("plans");
-    loadPlans=fbLoadPlans; savePlanAs=fbSavePlanAs; saveState=fbSaveState; loadPlan=fbLoadPlan; deletePlan=fbDeletePlan;
+    loadPlans=fbLoadPlans; savePlanAs=fbSavePlanAs; saveState=fbSaveState; loadPlan=fbLoadPlan; deletePlan=fbDeletePlan; movePlan=fbMovePlan;
     subscribe();
     document.getElementById("authOverlay").style.display="none";
     // Abmelden-Button in die Toolbar
