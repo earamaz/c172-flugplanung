@@ -170,9 +170,9 @@
     body.kb #nav td{height:26px}                 /* hoch genug zum Reinschreiben */
     body.kb #nav th.atocol,body.kb #nav td.atocol{min-width:0}
     body.kb #nav .ato{width:100%}
-    body.kb #nav th:nth-child(1),body.kb #nav td:nth-child(1){width:17%}    /* Wegpunkt breit */
-    body.kb #nav th:nth-child(17),body.kb #nav td:nth-child(17){width:17%}  /* ATO breit (Handeintrag) */
-    /* alle Zahlenspalten gleich breit: MSA(3) ALT(4) TC(5) DIST(9) MH(11) GS(12) ETE(13) ΣNM(15) ETO(16) */
+    body.kb #nav th:nth-child(1),body.kb #nav td:nth-child(1){width:17%}    /* Wegpunkt */
+    body.kb #nav th:nth-child(17),body.kb #nav td:nth-child(17){width:20%}  /* ATO = breiteste Spalte (Handeintrag) */
+    /* alle Zahlenspalten gleich (klein): MSA(3) ALT(4) TC(5) DIST(9) MH(11) GS(12) ETE(13) ΣNM(15) ETO(16) */
     body.kb #nav th:nth-child(3),body.kb #nav td:nth-child(3),
     body.kb #nav th:nth-child(4),body.kb #nav td:nth-child(4),
     body.kb #nav th:nth-child(5),body.kb #nav td:nth-child(5),
@@ -181,7 +181,7 @@
     body.kb #nav th:nth-child(12),body.kb #nav td:nth-child(12),
     body.kb #nav th:nth-child(13),body.kb #nav td:nth-child(13),
     body.kb #nav th:nth-child(15),body.kb #nav td:nth-child(15),
-    body.kb #nav th:nth-child(16),body.kb #nav td:nth-child(16){width:7.3%}
+    body.kb #nav th:nth-child(16),body.kb #nav td:nth-child(16){width:7%}
     /* auf dem Kniebrett weggelassene Spalten: Freq(2) Wind(6) VAR(7) TAS(8) WCA(10) ΣZeit(14) */
     body.kb #nav th:nth-child(2),body.kb #nav td:nth-child(2),
     body.kb #nav th:nth-child(6),body.kb #nav td:nth-child(6),
@@ -193,7 +193,26 @@
     body.kb #freqTable th,body.kb #freqTable td{padding:2px 3px}
     /* nur Enroute Clearances behalten (GAFOR/Briefing/ATIS via kb-hide raus), volle Breite */
     body.kb .kb-keep .grid{grid-template-columns:1fr!important}
-    body.kb #enroute{min-height:74px}
+    body.kb #enroute{min-height:48px}
+    /* Performance-Block: Start | Landung | Steig-/Sinkflug */
+    body.kb #kbPerf{display:block!important;margin-top:6px;border:1px solid #444}
+    body.kb #kbPerf .kbp-grid{display:flex}
+    body.kb #kbPerf .kbp-box{flex:1;padding:4px 8px;border-left:1px solid #888;min-width:0}
+    body.kb #kbPerf .kbp-box:first-child{border-left:none}
+    body.kb #kbPerf .kbp-h{font-size:7px;text-transform:uppercase;letter-spacing:.3px;color:#555;font-weight:600;margin-bottom:3px}
+    body.kb #kbPerf .kbp-line{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:8.5px;padding:1.5px 0}
+    body.kb #kbPerf .kbp-line span:first-child{color:#333;white-space:nowrap}
+    body.kb #kbPerf .kbp-line b{font-weight:700;text-align:right}
+    body.kb #kbPerf .kbp-write{flex:1;border-bottom:1px solid #999;min-width:40px;height:12px;margin-left:6px}
+    /* Volle A5-Seitenlänge nutzen: Reihenfolge Navlog->Freq->Perf->Enroute(wächst)->Zeitstempel */
+    body.kb .wrap{display:flex;flex-direction:column;min-height:184mm}
+    body.kb .card.kb-keep{order:2}
+    body.kb #kbPerf{order:3}
+    body.kb .card.kb-fill{order:4;flex:1 1 auto;display:flex;flex-direction:column}
+    body.kb .card.kb-fill .grid{flex:1;display:flex!important}
+    body.kb .card.kb-fill .grid>div{flex:1;display:flex;flex-direction:column;min-width:0}
+    body.kb .card.kb-fill #enroute{flex:1;min-height:60px}
+    body.kb .footer{order:5}
     /* Footer: nur Zeitstempel, Disclaimer + Copyright weg */
     body.kb .footer{margin-top:6px;font-size:8px;color:#333}
     body.kb .footer .cpr{display:none!important}
@@ -218,7 +237,7 @@
 <body>
 <div id="authOverlay" class="auth-overlay" style="display:none">
   <div class="auth-box">
-    <div class="auth-logo">✈</div>
+    <div class="auth-logo"></div>
     <h1>C172 Flugplanung</h1>
     <p id="authMsg">Bitte anmelden.</p>
     <input type="email" id="authEmail" value="e.ar@gmx.de" autocomplete="username" placeholder="E-Mail">
@@ -232,18 +251,18 @@
 <div class="wrap">
   <header>
     <div class="brand">
-      <div class="logo">✈</div>
+      <div class="logo"></div>
       <div>
         <h1>C172 Flugplanung</h1>
         <div class="mini">Navlog · Weight &amp; Balance · Fuel — EDLI Bielefeld</div>
       </div>
     </div>
     <div class="toolbar noprint">
-      <button id="themeBtn" onclick="toggleTheme()" title="Hell/Dunkel">🌙 Dunkel</button>
+      <button id="themeBtn" onclick="toggleTheme()" title="Hell/Dunkel">Dunkel</button>
       <button onclick="newFlight()">Neuer Flug</button>
-      <button onclick="window.print()">🖨 Drucken / PDF (A4)</button>
-      <button onclick="printKneeboard()" title="Kompaktes A5-Blatt fürs Kniebrett: Navlog + Frequenzen + ATIS, mit ETO/ATO zum Reinschreiben">📋 Kniebrett (A5)</button>
-      <button class="primary" onclick="saveState()">💾 Speichern</button>
+      <button onclick="window.print()">Drucken / PDF (A4)</button>
+      <button onclick="printKneeboard()" title="Kompaktes A5-Blatt fürs Kniebrett: Navlog + Frequenzen + ATIS, mit ETO/ATO zum Reinschreiben">Kniebrett (A5)</button>
+      <button class="primary" onclick="saveState()">Speichern</button>
     </div>
   </header>
 
@@ -258,10 +277,10 @@
 
   <!-- PLAN LIBRARY -->
   <div class="card noprint" id="plansCard">
-    <h2>📋 Meine Flugpläne</h2>
+    <h2>Meine Flugpläne</h2>
     <button class="primary" onclick="savePlanAs()">＋ Aktuellen Plan speichern</button>
     <div id="plansList" style="margin-top:10px"></div>
-    <div class="note" style="margin-top:6px">Speichert den kompletten Plan mit Datum/Uhrzeit <b>in der Cloud</b> — auf allen Geräten mit deinem Login verfügbar. Der <b>● aktive</b> Plan wird von der <b>💾 Speichern</b>-Taste oben überschrieben — „＋ Aktuellen Plan speichern" legt einen neuen an.</div>
+    <div class="note" style="margin-top:6px">Speichert den kompletten Plan mit Datum/Uhrzeit <b>in der Cloud</b> — auf allen Geräten mit deinem Login verfügbar. Der <b>● aktive</b> Plan wird von der <b>Speichern</b>-Taste oben überschrieben — „＋ Aktuellen Plan speichern" legt einen neuen an.</div>
   </div>
 
   <!-- FLIGHT INFO -->
@@ -312,7 +331,7 @@
     </div>
     <button class="addbtn noprint" onclick="addLeg()">+ Wegpunkt</button>
     <button class="addbtn noprint" onclick="invertFlight()" title="Route umkehren für den Rückflug" style="margin-left:8px">⇄ Rückflug</button>
-    <div class="sub kb-hide" style="margin-top:14px">🛬 Ausweich (Alternate): <span id="altnRoute" class="mini"></span></div>
+    <div class="sub kb-hide" style="margin-top:14px">Ausweich (Alternate): <span id="altnRoute" class="mini"></span></div>
     <div class="navwrap kb-hide">
       <table id="altTable">
         <thead><tr>
@@ -372,7 +391,7 @@
   </div>
 
   <!-- ATIS / CLEARANCES -->
-  <div class="card print-first kb-keep">
+  <div class="card print-first kb-keep kb-fill">
     <div class="field kb-hide" style="margin-bottom:10px">
       <label>GAFOR — Gebiete entlang der Strecke (eine Zeile je Gebiet)</label>
       <textarea id="gafor" oninput="persist()" style="min-height:54px" placeholder="z.B.&#10;33 Ruhrgebiet/OWF: C (frei)&#10;07 Westl. Niedersachsen: O (offen, ISOL RADZ)"></textarea>
@@ -390,6 +409,30 @@
       <div>
         <h2 style="margin-bottom:6px">Enroute Clearances</h2>
         <textarea id="enroute" oninput="persist()" placeholder="Freigaben, Frequenzen, Squawk, Transponder-Codes, Übergaben …"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kniebrett Performance-Block (nur A5-Kniebrettdruck; per JS befüllt) -->
+  <div id="kbPerf" class="kb-only">
+    <div class="kbp-grid">
+      <div class="kbp-box">
+        <div class="kbp-h">Start (Abflug)</div>
+        <div class="kbp-line"><span>Piste in Nutzung</span><span class="kbp-write" id="kbRwyDep"></span></div>
+        <div class="kbp-line"><span>Rollstrecke</span><b id="kbToRoll"></b></div>
+        <div class="kbp-line"><span>über 15 m</span><b id="kbToObst"></b></div>
+      </div>
+      <div class="kbp-box">
+        <div class="kbp-h">Landung (Ankunft)</div>
+        <div class="kbp-line"><span>Piste in Nutzung</span><span class="kbp-write" id="kbRwyArr"></span></div>
+        <div class="kbp-line"><span>Rollstrecke</span><b id="kbLdRoll"></b></div>
+        <div class="kbp-line"><span>über 15 m</span><b id="kbLdObst"></b></div>
+      </div>
+      <div class="kbp-box">
+        <div class="kbp-h">Steig- / Sinkflug</div>
+        <div class="kbp-line"><span>TOC</span><b id="kbToc"></b></div>
+        <div class="kbp-line"><span>TOD</span><b id="kbTod"></b></div>
+        <div class="kbp-line"><span>Platzrunde</span><b id="kbPat"></b></div>
       </div>
     </div>
   </div>
@@ -456,7 +499,7 @@
     <div id="perfNote" class="note src-note" style="display:none"></div>
     <div class="grid">
       <div>
-        <div class="sub">🛫 Start (Abflug)</div>
+        <div class="sub">Start (Abflug)</div>
         <div class="row r3">
           <div class="field"><label>Platzhöhe (ft)</label><input id="dElev" value="450" oninput="recalc()"></div>
           <div class="field"><label>QNH (hPa)</label><input id="dQnh" value="1013" oninput="recalc()"></div>
@@ -484,7 +527,7 @@
         </div>
       </div>
       <div>
-        <div class="sub">🛬 Landung (Ankunft)</div>
+        <div class="sub">Landung (Ankunft)</div>
         <div class="row r3">
           <div class="field"><label>Platzhöhe (ft)</label><input id="aElev" value="450" oninput="recalc()"></div>
           <div class="field"><label>QNH (hPa)</label><input id="aQnh" value="1013" oninput="recalc()"></div>
@@ -526,13 +569,13 @@
     </div>
     <div class="grid" style="margin-top:6px">
       <div>
-        <div class="sub">⬆︎ Top of Climb (ab Start) <span class="mini" style="font-weight:400">· Steigrate aus POH</span></div>
+        <div class="sub">Top of Climb (ab Start) <span class="mini" style="font-weight:400">· Steigrate aus POH</span></div>
         <div class="kv"><span>Zeit bis TOC</span><b id="tocTime"></b></div>
         <div class="kv"><span>Strecke bis TOC</span><b id="tocDist"></b></div>
         <div class="kv"><span>Sprit im Steigflug</span><b id="tocFuel"></b></div>
       </div>
       <div>
-        <div class="sub">⬇︎ Top of Descent (vor Ziel)</div>
+        <div class="sub">Top of Descent (vor Ziel)</div>
         <div class="kv"><span>Sinkbeginn vor Platz</span><b id="todDist"></b></div>
         <div class="kv"><span>Sinkzeit</span><b id="todTime"></b></div>
         <div class="kv"><span>Höhe abzubauen</span><b id="todAlt"></b></div>
@@ -544,7 +587,7 @@
   <!-- AIRCRAFT PROFILES -->
   <div class="card noprint">
     <details>
-      <summary>⚙︎ Flugzeugprofile bearbeiten (Leermasse, Hebelarme, Limits …)</summary>
+      <summary>Flugzeugprofile bearbeiten (Leermasse, Hebelarme, Limits …)</summary>
       <div style="margin-top:10px">
         <div class="field" style="max-width:220px">
           <label>Profil</label>
@@ -573,7 +616,7 @@
   </div>
 
   <div class="footer">
-    <div>Flugplan erstellt am: <b id="createdDisp">—</b></div>
+    <div><span class="kb-hide">Flugplan erstellt am: </span><b id="createdDisp">—</b></div>
     <div class="kb-hide">Alle Angaben nach bestem Wissen und Gewissen ausgefüllt. Werte sind Planungshilfe, keine amtliche Berechnung — für Start-/Landestrecken immer das POH prüfen.</div>
     <div class="cpr">© Eyüp Aramaz, 2026</div>
   </div>
@@ -767,7 +810,9 @@ function climbBurn(p){
 }
 let PROF=structuredClone(DEFAULTS);
 let createdAt="";  // Zeitstempel „Flugplan erstellt am" (bleibt beim Plan)
-function updateCreatedDisp(){const el=$("createdDisp");if(el)el.textContent=createdAt?fmtWhen(createdAt):"—";}
+// Lokalzeit-Kürzel für Europa/Berlin (CEST im Sommer / CET im Winter)
+function tzAbbr(d){const jan=new Date(d.getFullYear(),0,1).getTimezoneOffset(),jul=new Date(d.getFullYear(),6,1).getTimezoneOffset();return d.getTimezoneOffset()<Math.max(jan,jul)?"CEST":"CET";}
+function updateCreatedDisp(){const el=$("createdDisp");if(el)el.textContent=createdAt?(fmtWhen(createdAt)+" "+tzAbbr(new Date(createdAt))):"—";}
 
 // ---------- helpers ----------
 const $=id=>document.getElementById(id);
@@ -827,10 +872,21 @@ function fillKbHead(){
   $("kbFrom").textContent=($("from").value||"").toUpperCase().trim();
   $("kbTo").textContent=($("to").value||"").toUpperCase().trim();
 }
+function fillKbPerf(){
+  var g=id=>{var e=$(id);return e?(e.textContent||"").trim():"";};
+  $("kbToRoll").textContent=g("dRoll")||"—";
+  $("kbToObst").textContent=g("dObst")||"—";
+  $("kbLdRoll").textContent=g("aRoll")||"—";
+  $("kbLdObst").textContent=g("aObst")||"—";
+  var td=g("tocDist"),tt=g("tocTime"); $("kbToc").textContent=(td||tt)?((td||"—")+" · "+(tt||"—")):"—";
+  var od=g("todDist"),oa=g("todAlt"); $("kbTod").textContent=(od||oa)?((od||"—")+" · "+(oa||"—")):"—";
+  var pa=($("patAlt")&&$("patAlt").value||"").trim(); $("kbPat").textContent=pa?(pa+" ft ü. Platz"):"—";
+  // Piste in Nutzung: leer zum Handeintrag am Flugtag (kbRwyDep/kbRwyArr bleiben leer)
+}
 function printKneeboard(){
-  fillKbHead();
+  fillKbHead(); fillKbPerf();
   document.body.classList.add("kb");
-  var pg=$("kbPage"); if(pg) pg.textContent="@page{size:A5 portrait;margin:7mm}";
+  var pg=$("kbPage"); if(pg) pg.textContent="@page{size:A5 portrait;margin:13mm 8mm 9mm 8mm}";
   window.print();
 }
 window.addEventListener("afterprint",function(){
@@ -842,7 +898,7 @@ window.addEventListener("afterprint",function(){
 function invertFlight(){
   const legRows=[...document.querySelectorAll("#navbody tr:not(.deprow)")];
   if(!legRows.length){alert("Keine Wegpunkte zum Umkehren.");return;}
-  if(!confirm("Rückflug erstellen? Die Route wird umgekehrt (Kurse +180°), Wind bleibt gleich, Von/Nach und Platzdaten werden getauscht.\n\nWICHTIG: Der Rückflug ist ein NEUER Flug. Sichere ihn danach mit „＋ Aktuellen Plan speichern“ als eigenen Plan (nicht mit 💾 Speichern – das würde sonst den Hinflug überschreiben). Der Hinflug bleibt unverändert gespeichert."))return;
+  if(!confirm("Rückflug erstellen? Die Route wird umgekehrt (Kurse +180°), Wind bleibt gleich, Von/Nach und Platzdaten werden getauscht.\n\nWICHTIG: Der Rückflug ist ein NEUER Flug. Sichere ihn danach mit „＋ Aktuellen Plan speichern“ als eigenen Plan (nicht mit Speichern – das würde sonst den Hinflug überschreiben). Der Hinflug bleibt unverändert gespeichert."))return;
   const depName=($("from").value||"").trim();
   const rows=legRows.map(tr=>({
     wp:tr.querySelector(".f-wp").value,
@@ -899,7 +955,7 @@ function ensureDepRow(){
   }
   if(row!==body.firstChild) body.insertBefore(row, body.firstChild);
   const f=($("from").value||"").toUpperCase().trim();
-  $("depWp").innerHTML = f ? ("🛫 "+f) : '<span class="depwp-empty">🛫 Startflugplatz (Von …)</span>';
+  $("depWp").innerHTML = f ? (""+f) : '<span class="depwp-empty">Startflugplatz (Von …)</span>';
 }
 
 // keep the two fuel-on-board inputs (W&B + Fuel block) in sync
@@ -1176,7 +1232,7 @@ function resetProfiles(){if(!confirm("Alle Profile auf Werkseinstellung zurücks
 // ---------- theme ----------
 function applyTheme(t){
   document.body.classList.toggle("light", t==="light");
-  const b=$("themeBtn"); if(b)b.textContent = t==="light" ? "☀︎ Hell" : "🌙 Dunkel";
+  const b=$("themeBtn"); if(b)b.textContent = t==="light" ? "Hell" : "Dunkel";
 }
 function toggleTheme(){
   const t=document.body.classList.contains("light")?"dark":"light";
@@ -1267,7 +1323,7 @@ function planRowHtml(p){
   return `<div class="planrow${p.id===activePlanId?' planactive':''}">
     <div><b>${escHtml(p.name)}</b> ${p.id===activePlanId?'<span class="mini activebadge">● aktiv</span>':''} <span class="mini">· ${escHtml((p.from||"?")+"→"+(p.to||"?"))} · ${escHtml(p.ac||"")}</span><br>
       <span class="mini">zuletzt gespeichert: ${fmtWhen(p.savedAt)}</span></div>
-    <div class="planbtns"><button onclick="loadPlan('${p.id}')">Laden</button><button title="In Ordner verschieben" onclick="movePlan('${p.id}')">📁</button><button class="pdel" onclick="deletePlan('${p.id}')">🗑</button></div>
+    <div class="planbtns"><button onclick="loadPlan('${p.id}')">Laden</button><button title="In Ordner verschieben" onclick="movePlan('${p.id}')">Ordner</button><button class="pdel" onclick="deletePlan('${p.id}')">Löschen</button></div>
   </div>`;
 }
 function renderPlans(){
@@ -1287,7 +1343,7 @@ function renderPlans(){
   if(names.length===1 && names[0]===""){ box.innerHTML=groups[""].map(planRowHtml).join(""); return; }
   box.innerHTML=names.map(f=>{
     const list=groups[f], isCol=collapsed.includes(f);
-    const label=f?("📁 "+escHtml(f)):"📄 Ohne Ordner";
+    const label=f?(""+escHtml(f)):"Ohne Ordner";
     return `<div class="folderhead" data-f="${escHtml(f)}" onclick="toggleFolder(this.dataset.f)">
       <span>${isCol?"▸":"▾"} ${label}</span><span class="mini">${list.length}</span></div>`
       + (isCol?"":`<div class="folderbody">${list.map(planRowHtml).join("")}</div>`);
