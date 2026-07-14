@@ -157,20 +157,31 @@
     body.kb header{display:none!important}      /* Brand-Kopf raus, Flugkopf ersetzt ihn */
     body.kb .kb-only{display:block!important}
     body.kb h2{font-size:9px;margin:0 0 3px}
-    /* Kniebrett-Flugkopf */
-    body.kb #kbHead{border:1px solid #888;padding:4px 6px;margin-bottom:5px}
-    body.kb #kbHead .kbh-row{display:flex;gap:6px;margin-bottom:3px}
-    body.kb #kbHead .kbh-row:last-child{margin-bottom:0}
-    body.kb #kbHead .kbh-row>div{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
-    body.kb #kbHead .kbh-row>div.kbh-wide{flex:2.6}
+    /* Kniebrett-Kopf: eine LBA-Zeile, nur Kennzeichnung (Datum/von/nach/Muster/Kennz.) */
+    body.kb #kbHead{display:flex!important;border:1px solid #444;margin-bottom:6px}
+    body.kb #kbHead .kbh-cell{flex:1;display:flex;flex-direction:column;gap:1px;padding:3px 7px;border-left:1px solid #888;min-width:0}
+    body.kb #kbHead .kbh-cell:first-child{border-left:none}
+    body.kb #kbHead .kbh-grow{flex:1.7}
     body.kb #kbHead .kbh-l{font-size:6.5px;text-transform:uppercase;letter-spacing:.3px;color:#555}
-    body.kb #kbHead .kbh-v{font-weight:700;font-size:9px;min-height:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    body.kb #kbHead .kbh-box{border:1px solid #999;height:15px;border-radius:2px;font-weight:700;font-size:9px;text-align:center;line-height:15px}
-    body.kb #nav{font-size:8px;table-layout:auto}
+    body.kb #kbHead .kbh-v{font-weight:700;font-size:10px;min-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    /* Navlog: Zahlenspalten alle gleich breit, Wegpunkt + ATO breit */
+    body.kb #nav{font-size:8px;table-layout:fixed;width:100%}
     body.kb #nav th,body.kb #nav td{padding:1px 2px}
     body.kb #nav td{height:26px}                 /* hoch genug zum Reinschreiben */
-    body.kb #nav th.atocol,body.kb #nav td.atocol{min-width:0;width:auto}
-    body.kb #nav .ato{width:64px}
+    body.kb #nav th.atocol,body.kb #nav td.atocol{min-width:0}
+    body.kb #nav .ato{width:100%}
+    body.kb #nav th:nth-child(1),body.kb #nav td:nth-child(1){width:17%}    /* Wegpunkt breit */
+    body.kb #nav th:nth-child(17),body.kb #nav td:nth-child(17){width:17%}  /* ATO breit (Handeintrag) */
+    /* alle Zahlenspalten gleich breit: MSA(3) ALT(4) TC(5) DIST(9) MH(11) GS(12) ETE(13) ΣNM(15) ETO(16) */
+    body.kb #nav th:nth-child(3),body.kb #nav td:nth-child(3),
+    body.kb #nav th:nth-child(4),body.kb #nav td:nth-child(4),
+    body.kb #nav th:nth-child(5),body.kb #nav td:nth-child(5),
+    body.kb #nav th:nth-child(9),body.kb #nav td:nth-child(9),
+    body.kb #nav th:nth-child(11),body.kb #nav td:nth-child(11),
+    body.kb #nav th:nth-child(12),body.kb #nav td:nth-child(12),
+    body.kb #nav th:nth-child(13),body.kb #nav td:nth-child(13),
+    body.kb #nav th:nth-child(15),body.kb #nav td:nth-child(15),
+    body.kb #nav th:nth-child(16),body.kb #nav td:nth-child(16){width:7.3%}
     /* auf dem Kniebrett weggelassene Spalten: Freq(2) Wind(6) VAR(7) TAS(8) WCA(10) ΣZeit(14) */
     body.kb #nav th:nth-child(2),body.kb #nav td:nth-child(2),
     body.kb #nav th:nth-child(6),body.kb #nav td:nth-child(6),
@@ -180,7 +191,12 @@
     body.kb #nav th:nth-child(14),body.kb #nav td:nth-child(14){display:none!important}
     body.kb #freqTable{font-size:8px}
     body.kb #freqTable th,body.kb #freqTable td{padding:2px 3px}
-    body.kb #atis,body.kb #enroute{min-height:56px}
+    /* nur Enroute Clearances behalten (GAFOR/Briefing/ATIS via kb-hide raus), volle Breite */
+    body.kb .kb-keep .grid{grid-template-columns:1fr!important}
+    body.kb #enroute{min-height:74px}
+    /* Footer: nur Zeitstempel, Disclaimer + Copyright weg */
+    body.kb .footer{margin-top:6px;font-size:8px;color:#333}
+    body.kb .footer .cpr{display:none!important}
   }
   /* --- Login-Overlay (Firebase) --- */
   .auth-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -231,22 +247,13 @@
     </div>
   </header>
 
-  <!-- Kniebrett-Flugkopf (nur im A5-Kniebrettdruck sichtbar; per JS befüllt) -->
+  <!-- Kniebrett-Kopf (nur im A5-Kniebrettdruck sichtbar; per JS befüllt) — LBA-Stil, nur Kennzeichnung -->
   <div id="kbHead" class="kb-only">
-    <div class="kbh-row">
-      <div><span class="kbh-l">Callsign</span><span class="kbh-v" id="kbCs"></span></div>
-      <div><span class="kbh-l">Flugzeug</span><span class="kbh-v" id="kbAc"></span></div>
-      <div class="kbh-wide"><span class="kbh-l">Route</span><span class="kbh-v" id="kbRoute"></span></div>
-      <div><span class="kbh-l">Datum</span><span class="kbh-v" id="kbDate"></span></div>
-      <div><span class="kbh-l">PIC</span><span class="kbh-v" id="kbPic"></span></div>
-    </div>
-    <div class="kbh-row">
-      <div><span class="kbh-l">Off-Block</span><span class="kbh-box" id="kbOff"></span></div>
-      <div><span class="kbh-l">Take-Off</span><span class="kbh-box" id="kbTot"></span></div>
-      <div><span class="kbh-l">Landing</span><span class="kbh-box" id="kbLdg"></span></div>
-      <div><span class="kbh-l">On-Block</span><span class="kbh-box" id="kbOn"></span></div>
-      <div><span class="kbh-l">Blockzeit</span><span class="kbh-box" id="kbBlk"></span></div>
-    </div>
+    <div class="kbh-cell"><span class="kbh-l">Datum</span><span class="kbh-v" id="kbDate"></span></div>
+    <div class="kbh-cell"><span class="kbh-l">von</span><span class="kbh-v" id="kbFrom"></span></div>
+    <div class="kbh-cell"><span class="kbh-l">nach</span><span class="kbh-v" id="kbTo"></span></div>
+    <div class="kbh-cell kbh-grow"><span class="kbh-l">LFZ-Muster</span><span class="kbh-v" id="kbAc"></span></div>
+    <div class="kbh-cell"><span class="kbh-l">LFZ-Kennz.</span><span class="kbh-v" id="kbCs"></span></div>
   </div>
 
   <!-- PLAN LIBRARY -->
@@ -366,17 +373,17 @@
 
   <!-- ATIS / CLEARANCES -->
   <div class="card print-first kb-keep">
-    <div class="field" style="margin-bottom:10px">
+    <div class="field kb-hide" style="margin-bottom:10px">
       <label>GAFOR — Gebiete entlang der Strecke (eine Zeile je Gebiet)</label>
       <textarea id="gafor" oninput="persist()" style="min-height:54px" placeholder="z.B.&#10;33 Ruhrgebiet/OWF: C (frei)&#10;07 Westl. Niedersachsen: O (offen, ISOL RADZ)"></textarea>
     </div>
-    <div class="row r3" style="margin-bottom:10px">
+    <div class="row r3 kb-hide" style="margin-bottom:10px">
       <div class="field"><label>Wetter-Beratung</label><input id="wxBrief" oninput="persist()" placeholder="Quelle / Uhrzeit UTC"></div>
       <div class="field"><label>FS-/AIS-Beratung</label><input id="atcBrief" oninput="persist()" placeholder="NOTAM / Uhrzeit UTC"></div>
       <div class="field"><label>Briefing gültig bis (UTC)</label><input id="briefValid" oninput="persist()" placeholder="––:––"></div>
     </div>
     <div class="grid">
-      <div>
+      <div class="kb-hide">
         <h2 style="margin-bottom:6px">ATIS / Weather</h2>
         <textarea id="atis" oninput="persist()" placeholder="ATIS-Buchstabe, QNH, Wind, Sicht, Wolken, RWY in use, Temp/Taupunkt …"></textarea>
       </div>
@@ -567,7 +574,7 @@
 
   <div class="footer">
     <div>Flugplan erstellt am: <b id="createdDisp">—</b></div>
-    <div>Alle Angaben nach bestem Wissen und Gewissen ausgefüllt. Werte sind Planungshilfe, keine amtliche Berechnung — für Start-/Landestrecken immer das POH prüfen.</div>
+    <div class="kb-hide">Alle Angaben nach bestem Wissen und Gewissen ausgefüllt. Werte sind Planungshilfe, keine amtliche Berechnung — für Start-/Landestrecken immer das POH prüfen.</div>
     <div class="cpr">© Eyüp Aramaz, 2026</div>
   </div>
 </div>
@@ -811,20 +818,14 @@ function legRow(d={}){
 function addLeg(d){$("navbody").appendChild(legRow(d));recalc();}
 // Kniebrett-Druck: A5 hoch, nur Flugkopf + Navlog (reduziert) + Frequenzen + ATIS
 function fillKbHead(){
-  var acSel=$("ac"), acTxt=(acSel&&acSel.selectedIndex>=0)?acSel.options[acSel.selectedIndex].text:"";
-  $("kbCs").textContent=($("cs").value||"").trim();
-  // Callsign zeigt schon das Kennzeichen -> unter "Flugzeug" nur den Typ (Teil nach "·")
-  $("kbAc").textContent = acTxt.indexOf("·")>=0 ? acTxt.split("·").pop().trim() : acTxt;
+  var p=cur();
+  // LFZ-Muster: Profil-Typ als "Cessna 172R" ausschreiben (C172R -> Cessna 172R)
+  var typ=(p&&p.type||"").trim();
+  $("kbAc").textContent = /^C\s*1?7?2/i.test(typ) ? typ.replace(/^C\s*/i,"Cessna ") : typ;
+  $("kbCs").textContent=($("cs").value||"").trim();   // LFZ-Kennz.
   var d=$("date").value; $("kbDate").textContent = d ? d.split("-").reverse().join(".") : "";
-  $("kbPic").textContent=($("pic").value||"").trim();
-  var fr=($("from").value||"").toUpperCase().trim(), to=($("to").value||"").toUpperCase().trim(), al=($("altn").value||"").toUpperCase().trim();
-  $("kbRoute").textContent=(fr+" → "+to)+(al?"  · Ausw. "+al:"");
-  // Zeiten: gesetzte Werte anzeigen, sonst leeres Kästchen zum Handschreiben
-  $("kbOff").textContent=$("offblk").value||"";
-  $("kbTot").textContent=$("tot").value||"";
-  $("kbLdg").textContent=$("landing").value||"";
-  $("kbOn").textContent=$("onblk").value||"";
-  $("kbBlk").textContent=$("blockTime").value||"";
+  $("kbFrom").textContent=($("from").value||"").toUpperCase().trim();
+  $("kbTo").textContent=($("to").value||"").toUpperCase().trim();
 }
 function printKneeboard(){
   fillKbHead();
