@@ -92,6 +92,7 @@
   .folderhead:hover{border-color:var(--accent2)}
   .folderbody{padding-left:10px;border-left:2px solid var(--line);margin-left:4px}
   .kb-only{display:none}   /* Kniebrett-Kopf: nur im A5-Kniebrettdruck (body.kb) sichtbar */
+  .kb-name{display:none}   /* Name im Footer: nur im Kniebrett (inline neben Uhrzeit) */
   .addbtn{margin-top:8px}
   .tag{font-size:11px;color:var(--muted)}
   details summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
@@ -209,18 +210,18 @@
     body.kb #kbPerf .kbp-line span:first-child{color:#333;white-space:nowrap}
     body.kb #kbPerf .kbp-line b{font-weight:700;text-align:right}
     body.kb #kbPerf .kbp-write{flex:1;border-bottom:1px solid #999;min-width:40px;height:12px;margin-left:6px}
-    /* Volle A5-Seitenlänge nutzen: Reihenfolge Navlog->Freq->Perf->Enroute(wächst)->Zeitstempel */
-    body.kb .wrap{display:flex;flex-direction:column;min-height:184mm}
-    body.kb .card.kb-keep{order:2}
-    body.kb #kbPerf{order:3}
-    body.kb .card.kb-fill{order:4;flex:1 1 auto;display:flex;flex-direction:column}
-    body.kb .card.kb-fill .grid{flex:1;display:flex!important}
-    body.kb .card.kb-fill .grid>div{flex:1;display:flex;flex-direction:column;min-width:0}
-    body.kb .card.kb-fill #enroute{flex:1;min-height:50mm}
+    /* Reihenfolge Navlog->Freq->Perf->Enroute->Zeitstempel + feste Abstände (entzerrt, druckfest) */
+    body.kb .wrap{display:flex;flex-direction:column;padding:4mm}
+    body.kb #kbHead{margin-bottom:5mm}
+    body.kb .card.kb-keep{order:2;margin-bottom:5mm}
+    body.kb #kbPerf{order:3;margin-bottom:5mm}
+    body.kb .card.kb-fill{order:4;margin-bottom:0}
+    body.kb .card.kb-fill #enroute{min-height:26mm}
     body.kb .footer{order:5}
     /* Footer: nur Zeitstempel, Disclaimer + Copyright weg */
     body.kb .footer{margin-top:6px;font-size:8px;color:#333}
     body.kb .footer .cpr{display:none!important}
+    body.kb .kb-name{display:inline!important}
   }
   /* --- Login-Overlay (Firebase) --- */
   .auth-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -621,7 +622,7 @@
   </div>
 
   <div class="footer">
-    <div><span class="kb-hide">Flugplan erstellt am: </span><b id="createdDisp">—</b></div>
+    <div><span class="kb-hide">Flugplan erstellt am: </span><b id="createdDisp">—</b><span class="kb-name"> · Eyüp Aramaz</span></div>
     <div class="kb-hide">Alle Angaben nach bestem Wissen und Gewissen ausgefüllt. Werte sind Planungshilfe, keine amtliche Berechnung — für Start-/Landestrecken immer das POH prüfen.</div>
     <div class="cpr">© Eyüp Aramaz, 2026</div>
   </div>
@@ -891,7 +892,7 @@ function fillKbPerf(){
 function printKneeboard(){
   fillKbHead(); fillKbPerf();
   document.body.classList.add("kb");
-  var pg=$("kbPage"); if(pg) pg.textContent="@page{size:A5 portrait;margin:12mm 11mm 11mm 11mm}";
+  var pg=$("kbPage"); if(pg) pg.textContent="@page{size:A5 portrait;margin:7mm}";
   window.print();
 }
 window.addEventListener("afterprint",function(){
