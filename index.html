@@ -167,6 +167,11 @@
     /* Navlog: Zahlenspalten alle gleich breit, Wegpunkt + ATO breit */
     body.kb #nav{font-size:8px;table-layout:fixed;width:100%}
     body.kb #nav th,body.kb #nav td{padding:1px 2px}
+    /* Zahlen sauber mittig in jeder Zelle (horizontal + vertikal); Wegpunkt bleibt links */
+    body.kb #nav td,body.kb #nav th,body.kb #nav td input{text-align:center!important;vertical-align:middle}
+    /* feste px-Breiten der Felder aufheben -> Feld füllt die (schmale) Zelle, Zahl bleibt mittig */
+    body.kb #nav td input{width:100%!important;box-sizing:border-box;padding:1px 0!important;font-size:inherit}
+    body.kb #nav td:first-child,body.kb #nav th:first-child,body.kb #nav td:first-child input{text-align:left!important}
     body.kb #nav td{height:26px}                 /* hoch genug zum Reinschreiben */
     body.kb #nav th.atocol,body.kb #nav td.atocol{min-width:0}
     body.kb #nav .ato{width:100%}
@@ -211,7 +216,7 @@
     body.kb .card.kb-fill{order:4;flex:1 1 auto;display:flex;flex-direction:column}
     body.kb .card.kb-fill .grid{flex:1;display:flex!important}
     body.kb .card.kb-fill .grid>div{flex:1;display:flex;flex-direction:column;min-width:0}
-    body.kb .card.kb-fill #enroute{flex:1;min-height:60px}
+    body.kb .card.kb-fill #enroute{flex:1;min-height:50mm}
     body.kb .footer{order:5}
     /* Footer: nur Zeitstempel, Disclaimer + Copyright weg */
     body.kb .footer{margin-top:6px;font-size:8px;color:#333}
@@ -886,7 +891,7 @@ function fillKbPerf(){
 function printKneeboard(){
   fillKbHead(); fillKbPerf();
   document.body.classList.add("kb");
-  var pg=$("kbPage"); if(pg) pg.textContent="@page{size:A5 portrait;margin:13mm 8mm 9mm 8mm}";
+  var pg=$("kbPage"); if(pg) pg.textContent="@page{size:A5 portrait;margin:12mm 11mm 11mm 11mm}";
   window.print();
 }
 window.addEventListener("afterprint",function(){
