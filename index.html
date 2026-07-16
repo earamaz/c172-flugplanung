@@ -355,8 +355,9 @@
       </table>
     </div>
     <div class="note kb-hide">Ausweich-Leg (Ziel → Ausweichplatz), MC = missweisender Kurs. Für die Sprit-Reserve werden mind. 10 min angesetzt (wie LBA/Excel).</div>
-    <div class="row r3 kb-hide" style="margin-top:12px">
-      <div class="field"><label>Zuschlag Platzrunde/Approach (min)</label><input id="apprMin" value="10" oninput="recalc()"></div>
+    <div class="row r4 kb-hide" style="margin-top:12px">
+      <div class="field"><label>Zuschlag Abflug (min)</label><input id="depMin" value="5" oninput="recalc()" title="Rollen/Start/Ausflug – unkontrolliert ca. 5 min, kontrolliert ca. 10 min"></div>
+      <div class="field"><label>Zuschlag Anflug (min)</label><input id="apprMin" value="10" oninput="recalc()" title="Platzrunde/Approach – unkontrolliert ca. 5 min, kontrolliert ca. 10 min"></div>
       <div class="field"><label>Gesamt-Flugzeit (Trip)</label><input id="tripTime" class="calc" readonly></div>
       <div class="field"><label>Gesamt-Distanz</label><input id="totDist" class="calc" readonly></div>
     </div>
@@ -1018,8 +1019,9 @@ function recalc(){
       } else {setC(".ete","");setC(".acc","");setC(".accd","");setC(".eto","");}
     } else {[".wca",".mh",".gs",".ete",".acc",".accd",".eto"].forEach(c=>setC(c,""));}
   });
+  const depMin=num($("depMin").value)||0;
   const apprMin=num($("apprMin").value)||0;
-  const totalTrip=tripMin+apprMin;
+  const totalTrip=tripMin+depMin+apprMin;
   $("tripTime").value=hhmm(totalTrip)+" h";
   $("totDist").value=fx(accDist,0)+" NM";
 
@@ -1254,7 +1256,7 @@ function collect(){
     var:tr.querySelector(".var").value,tas:tr.querySelector(".tas").value,dist:tr.querySelector(".dist").value,
     ato:tr.querySelector(".ato").value}));
   const f={};["ac","from","to","altn","date","pic","co","tot","offblk","landing","onblk",
-    "apprMin","altMc","altAlt","altWd","altWv","altTas","altDist","pFront","pRear","pC1","pC2","fuelL","taxiL",
+    "depMin","apprMin","altMc","altAlt","altWd","altWv","altTas","altDist","pFront","pRear","pC1","pC2","fuelL","taxiL",
     "dElev","dQnh","dOat","dRwy","dWd","dWv","dSurf","dSlope","dAvRoll","dAv15",
     "aElev","aQnh","aOat","aRwy","aWd","aWv","aSurf","aSlope","aAvRoll","aAv15",
     "crzAlt","descRate","descGs","patAlt","atis","enroute",
