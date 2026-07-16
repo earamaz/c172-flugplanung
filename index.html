@@ -626,7 +626,7 @@
   </div>
 
   <div class="footer">
-    <div><span class="kb-hide">Flugplan erstellt am: </span><b id="createdDisp">—</b><span class="kb-name"> · Eyüp Aramaz</span></div>
+    <div><span class="kb-hide">Stand: </span><b id="createdDisp">—</b><span class="kb-name"> · Eyüp Aramaz</span></div>
     <div class="kb-hide">Alle Angaben nach bestem Wissen und Gewissen ausgefüllt. Werte sind Planungshilfe, keine amtliche Berechnung — für Start-/Landestrecken immer das POH prüfen.</div>
     <div class="cpr">© Eyüp Aramaz, 2026</div>
   </div>
@@ -820,9 +820,12 @@ function climbBurn(p){
 }
 let PROF=structuredClone(DEFAULTS);
 let createdAt="";  // Zeitstempel „Flugplan erstellt am" (bleibt beim Plan)
-// Lokalzeit-Kürzel für Europa/Berlin (CEST im Sommer / CET im Winter)
-function tzAbbr(d){const jan=new Date(d.getFullYear(),0,1).getTimezoneOffset(),jul=new Date(d.getFullYear(),6,1).getTimezoneOffset();return d.getTimezoneOffset()<Math.max(jan,jul)?"CEST":"CET";}
-function updateCreatedDisp(){const el=$("createdDisp");if(el)el.textContent=createdAt?(fmtWhen(createdAt)+" "+tzAbbr(new Date(createdAt))):"—";}
+// Fliegerisch wird alles in Zulu (UTC) gefuehrt -> Fussnote nie in Lokalzeit.
+function fmtUtc(d){const p=n=>String(n).padStart(2,"0");
+  return p(d.getUTCDate())+"."+p(d.getUTCMonth()+1)+"."+d.getUTCFullYear()+", "+p(d.getUTCHours())+":"+p(d.getUTCMinutes())+" UTC";}
+function updateCreatedDisp(){const el=$("createdDisp");if(el)el.textContent=createdAt?fmtUtc(new Date(createdAt)):"—";}
+// Beim Drucken/Export zeigt die Fussnote den Zeitpunkt des Ausdrucks (nicht den Speicherzeitpunkt).
+function stampPrintTime(){const el=$("createdDisp");if(el)el.textContent=fmtUtc(new Date());}
 
 // ---------- helpers ----------
 const $=id=>document.getElementById(id);
@@ -901,9 +904,12 @@ function printKneeboard(){
   var pg=$("kbPage"); if(pg) pg.textContent="@page{size:A5 portrait;margin:11mm}";
   window.print();
 }
+// Greift bei beiden Druck-Buttons und bei Cmd+P: Fussnote = Zeitpunkt des Ausdrucks (UTC).
+window.addEventListener("beforeprint",stampPrintTime);
 window.addEventListener("afterprint",function(){
   document.body.classList.remove("kb");
   var pg=$("kbPage"); if(pg) pg.textContent="";
+  updateCreatedDisp();   // am Bildschirm wieder den Plan-Zeitstempel zeigen
 });
 // Rückflug: Route umkehren. Kurse +180°, Wind/VAR/TAS bleiben (Wind ist ortsfest!),
 // Von/Nach + Platzdaten (Start/Landung) getauscht, Zeiten geleert.
