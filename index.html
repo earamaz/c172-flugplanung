@@ -355,11 +355,12 @@
       </table>
     </div>
     <div class="note kb-hide">Ausweich-Leg (Ziel → Ausweichplatz), MC = missweisender Kurs. Für die Sprit-Reserve werden mind. 10 min angesetzt (wie LBA/Excel).</div>
-    <div class="row r4 kb-hide" style="margin-top:12px">
-      <div class="field"><label>Zuschlag Abflug (min)</label><input id="depMin" value="5" oninput="recalc()" title="Rollen/Start/Ausflug – unkontrolliert ca. 5 min, kontrolliert ca. 10 min"></div>
-      <div class="field"><label>Zuschlag Anflug (min)</label><input id="apprMin" value="10" oninput="recalc()" title="Platzrunde/Approach – unkontrolliert ca. 5 min, kontrolliert ca. 10 min"></div>
+    <div class="row r5 kb-hide" style="margin-top:12px">
+      <div class="field"><label>Zuschlag Abflug (min)</label><input id="depMin" value="5" oninput="recalc()" title="Start/Ausflug bis Kursnahme – unkontrolliert ca. 5 min, kontrolliert ca. 10 min. Verschiebt alle ETO."></div>
+      <div class="field"><label>Zuschlag Anflug (min)</label><input id="apprMin" value="10" oninput="recalc()" title="Platzrunde/Approach bis Landung – unkontrolliert ca. 5 min, kontrolliert ca. 10 min"></div>
       <div class="field"><label>Gesamt-Flugzeit (Trip)</label><input id="tripTime" class="calc" readonly></div>
       <div class="field"><label>Gesamt-Distanz</label><input id="totDist" class="calc" readonly></div>
+      <div class="field"><label>Lande-ETA (Take-Off + Trip)</label><input id="etaLanding" class="calc" readonly></div>
     </div>
   </div>
 
@@ -428,12 +429,14 @@
         <div class="kbp-line"><span>Piste in Nutzung</span><span class="kbp-write" id="kbRwyDep"></span></div>
         <div class="kbp-line"><span>Rollstrecke</span><b id="kbToRoll"></b></div>
         <div class="kbp-line"><span>über 15 m</span><b id="kbToObst"></b></div>
+        <div class="kbp-line"><span>Zuschlag Abflug</span><b id="kbDepMin"></b></div>
       </div>
       <div class="kbp-box">
         <div class="kbp-h">Landung (Ankunft)</div>
         <div class="kbp-line"><span>Piste in Nutzung</span><span class="kbp-write" id="kbRwyArr"></span></div>
         <div class="kbp-line"><span>Rollstrecke</span><b id="kbLdRoll"></b></div>
         <div class="kbp-line"><span>über 15 m</span><b id="kbLdObst"></b></div>
+        <div class="kbp-line"><span>Zuschlag Anflug</span><b id="kbApprMin"></b></div>
       </div>
       <div class="kbp-box">
         <div class="kbp-h">Steig- / Sinkflug</div>
@@ -888,6 +891,8 @@ function fillKbPerf(){
   var td=g("tocDist"),tt=g("tocTime"); $("kbToc").textContent=(td||tt)?((td||"—")+" · "+(tt||"—")):"—";
   var od=g("todDist"),oa=g("todAlt"); $("kbTod").textContent=(od||oa)?((od||"—")+" · "+(oa||"—")):"—";
   var pa=($("patAlt")&&$("patAlt").value||"").trim(); $("kbPat").textContent=pa?(pa+" ft ü. Platz"):"—";
+  var dm=($("depMin")&&$("depMin").value||"").trim(); $("kbDepMin").textContent=dm?(dm+" min"):"—";
+  var am=($("apprMin")&&$("apprMin").value||"").trim(); $("kbApprMin").textContent=am?(am+" min"):"—";
   // Piste in Nutzung: leer zum Handeintrag am Flugtag (kbRwyDep/kbRwyArr bleiben leer)
 }
 function printKneeboard(){
@@ -991,6 +996,9 @@ function recalc(){
   // Startflugplatz-Zeile (aus „Von") oben halten
   ensureDepRow();
   // NAVLOG
+  // Zuschlaege vor der Leg-Schleife lesen: der Abflug-Zuschlag verschiebt alle ETO.
+  const depMin=num($("depMin").value)||0;
+  const apprMin=num($("apprMin").value)||0;
   let accMin=0,accDist=0,tripMin=0;
   document.querySelectorAll("#navbody tr:not(.deprow)").forEach(tr=>{
     const tc=num(tr.querySelector(".tc").value);
@@ -1015,15 +1023,15 @@ function recalc(){
         setC(".ete",hhmm(ete));
         setC(".acc",hhmm(accMin));
         setC(".accd",fx(accDist,0));
-        setC(".eto",addClock($("tot").value,accMin));
+        setC(".eto",addClock($("tot").value,depMin+accMin));
       } else {setC(".ete","");setC(".acc","");setC(".accd","");setC(".eto","");}
     } else {[".wca",".mh",".gs",".ete",".acc",".accd",".eto"].forEach(c=>setC(c,""));}
   });
-  const depMin=num($("depMin").value)||0;
-  const apprMin=num($("apprMin").value)||0;
   const totalTrip=tripMin+depMin+apprMin;
   $("tripTime").value=hhmm(totalTrip)+" h";
   $("totDist").value=fx(accDist,0)+" NM";
+  // Lande-ETA = Take-Off + Trip (= letzter ETO + Anflug-Zuschlag)
+  $("etaLanding").value=addClock($("tot").value,totalTrip);
 
   // --- Ausweich-Leg (Ziel -> Ausweichplatz): MC (missweisend) + Wind -> WCA/MH/GS/Zeit ---
   $("altnRoute").textContent = (($("to").value||"?").toUpperCase())+" → "+(($("altn").value||"?").toUpperCase());
