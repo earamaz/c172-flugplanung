@@ -61,8 +61,8 @@
   td input:focus{background:var(--input)}
   td.calc{background:var(--calc-bg);font-weight:600;color:var(--calc-txt)}
   td.wp input{text-align:left;font-weight:600}
-  #nav th.atocol,#nav td.atocol{min-width:100px}
-  td.atocol input.ato{width:100%}
+  #nav th.atocol,#nav td.atocol,#nav th.etocol,#nav td.etocol{min-width:100px}
+  td.atocol input.ato,td.etocol input.eto-in{width:100%}
   .deprow td{background:var(--panel2)}
   .deprow td.wp{text-align:left;font-weight:700;padding-left:8px}
   .deprow .depwp-empty{color:var(--muted);font-weight:400}
@@ -141,10 +141,9 @@
     #nav th.atocol,#nav td.atocol{min-width:130px;width:130px}
     #nav td.atocol{height:30px}
     #nav td.ato input,td input{font-weight:600}
-    /* ETO im Druck leer (Handeintrag), Spaltenbreite = ATO */
+    /* ETO: Eingabefeld wie ATO (Pilot tippt selbst), Spaltenbreite = ATO */
     #nav th.etocol,#nav td.etocol{min-width:130px;width:130px}
     #nav td.etocol{height:30px}
-    #nav td.eto{color:transparent!important}
     /* weather / notes: room to write by hand, but not a full page */
     textarea{min-height:52px;border:1px solid #bbb}
     /* page breaks: 1 = cockpit, 2 = mass & fuel, 3 = distances & climb/descent */
@@ -875,7 +874,8 @@ function legRow(d={}){
     <td><input class="tas" value="${d.tas||""}" oninput="recalc()" style="width:44px"></td>
     <td><input class="dist" value="${d.dist||""}" oninput="recalc()" style="width:48px"></td>
     <td class="wca"></td><td class="calc mh"></td><td class="gs"></td>
-    <td class="ete"></td><td class="acc"></td><td class="accd"></td><td class="eto etocol"></td>
+    <td class="ete"></td><td class="acc"></td><td class="accd"></td>
+    <td class="etocol"><input class="eto-in" value="${d.eto||""}" oninput="persist()"></td>
     <td class="atocol"><input class="ato" value="${d.ato||""}" oninput="persist()"></td>
     <td class="noprint"><button class="rm" onclick="this.closest('tr').remove();recalc()">✕</button></td>`;
   return tr;
@@ -1036,9 +1036,9 @@ function recalc(){
         setC(".ete",hhmm(ete));
         setC(".acc",hhmm(accMin));
         setC(".accd",fx(accDist,0));
-        setC(".eto",addClock($("tot").value,depMin+accMin));
-      } else {setC(".ete","");setC(".acc","");setC(".accd","");setC(".eto","");}
-    } else {[".wca",".mh",".gs",".ete",".acc",".accd",".eto"].forEach(c=>setC(c,""));}
+        // ETO wird NICHT mehr berechnet – der Pilot tippt sie selbst ein (Eingabefeld .eto-in)
+      } else {setC(".ete","");setC(".acc","");setC(".accd","");}
+    } else {[".wca",".mh",".gs",".ete",".acc",".accd"].forEach(c=>setC(c,""));}
   });
   const totalTrip=tripMin+depMin+apprMin;
   $("tripTime").value=hhmm(totalTrip)+" h";
@@ -1275,7 +1275,7 @@ function collect(){
     msa:tr.children[2].querySelector("input").value,alt:tr.children[3].querySelector("input").value,
     tc:tr.querySelector(".tc").value,wd:tr.querySelector(".wd").value,wv:tr.querySelector(".wv").value,
     var:tr.querySelector(".var").value,tas:tr.querySelector(".tas").value,dist:tr.querySelector(".dist").value,
-    ato:tr.querySelector(".ato").value}));
+    eto:tr.querySelector(".eto-in").value,ato:tr.querySelector(".ato").value}));
   const f={};["ac","from","to","altn","date","pic","co","tot","offblk","landing","onblk",
     "depMin","apprMin","altMc","altAlt","altWd","altWv","altTas","altDist","pFront","pRear","pC1","pC2","fuelL","taxiL",
     "dElev","dQnh","dOat","dRwy","dWd","dWv","dSurf","dSlope","dAvRoll","dAv15",
