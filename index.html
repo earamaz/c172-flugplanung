@@ -141,6 +141,10 @@
     #nav th.atocol,#nav td.atocol{min-width:130px;width:130px}
     #nav td.atocol{height:30px}
     #nav td.ato input,td input{font-weight:600}
+    /* ETO im Druck leer (Handeintrag), Spaltenbreite = ATO */
+    #nav th.etocol,#nav td.etocol{min-width:130px;width:130px}
+    #nav td.etocol{height:30px}
+    #nav td.eto{color:transparent!important}
     /* weather / notes: room to write by hand, but not a full page */
     textarea{min-height:52px;border:1px solid #bbb}
     /* page breaks: 1 = cockpit, 2 = mass & fuel, 3 = distances & climb/descent */
@@ -174,20 +178,23 @@
     body.kb #nav td input{width:100%!important;box-sizing:border-box;padding:1px 0!important;font-size:inherit}
     body.kb #nav td:first-child,body.kb #nav th:first-child,body.kb #nav td:first-child input{text-align:left!important}
     body.kb #nav td{height:26px}                 /* hoch genug zum Reinschreiben */
-    body.kb #nav th.atocol,body.kb #nav td.atocol{min-width:0}
+    body.kb #nav th.atocol,body.kb #nav td.atocol,body.kb #nav th.etocol,body.kb #nav td.etocol{min-width:0}
     body.kb #nav .ato{width:100%}
     body.kb #nav th:nth-child(1),body.kb #nav td:nth-child(1){width:16%}    /* Wegpunkt */
-    body.kb #nav th:nth-child(17),body.kb #nav td:nth-child(17){width:27%}  /* ATO = breiteste Spalte (Handeintrag) */
-    /* alle Zahlenspalten gleich (klein): MSA(3) ALT(4) TC(5) DIST(9) MH(11) GS(12) ETE(13) ΣNM(15) ETO(16) */
+    /* ETO (16) leer + GENAU so breit wie ATO (17) — beide Handeintrag-Spalten */
+    body.kb #nav th:nth-child(16),body.kb #nav td:nth-child(16),
+    body.kb #nav th:nth-child(17),body.kb #nav td:nth-child(17){width:18.5%}
+    /* Zahlenspalten: MSA(3) ALT(4) je 6% · TC(5) GS(12) ΣNM(15) je 5% · DIST(9) 4,5% */
     body.kb #nav th:nth-child(3),body.kb #nav td:nth-child(3),
-    body.kb #nav th:nth-child(4),body.kb #nav td:nth-child(4),
+    body.kb #nav th:nth-child(4),body.kb #nav td:nth-child(4){width:6%}
     body.kb #nav th:nth-child(5),body.kb #nav td:nth-child(5),
-    body.kb #nav th:nth-child(9),body.kb #nav td:nth-child(9),
-    body.kb #nav th:nth-child(11),body.kb #nav td:nth-child(11),
     body.kb #nav th:nth-child(12),body.kb #nav td:nth-child(12),
-    body.kb #nav th:nth-child(13),body.kb #nav td:nth-child(13),
-    body.kb #nav th:nth-child(15),body.kb #nav td:nth-child(15),
-    body.kb #nav th:nth-child(16),body.kb #nav td:nth-child(16){width:6.3%}
+    body.kb #nav th:nth-child(15),body.kb #nav td:nth-child(15){width:5%}
+    body.kb #nav th:nth-child(9),body.kb #nav td:nth-child(9){width:4.5%}
+    /* MH (Steuerkurs, 11) + ETE (13): breiter, GRÖSSER & fett zum schnellen Ablesen im Flug */
+    body.kb #nav th:nth-child(11),body.kb #nav td:nth-child(11){width:6.5%}
+    body.kb #nav th:nth-child(13),body.kb #nav td:nth-child(13){width:9%}
+    body.kb #nav td:nth-child(11),body.kb #nav td:nth-child(13){font-size:10.5px;font-weight:700}
     /* auf dem Kniebrett weggelassene Spalten: Freq(2) Wind(6) VAR(7) TAS(8) WCA(10) ΣZeit(14) */
     body.kb #nav th:nth-child(2),body.kb #nav td:nth-child(2),
     body.kb #nav th:nth-child(6),body.kb #nav td:nth-child(6),
@@ -329,7 +336,7 @@
             <th>TC<br>°</th><th>Wind<br>°/kt</th><th>VAR<br>°</th>
             <th>TAS<br>kt</th><th>Dist<br>NM</th>
             <th>WCA<br>°</th><th class="calc">MH<br>°</th><th>GS<br>kt</th>
-            <th>ETE<br>Leg</th><th>Σ Zeit</th><th>Σ NM</th><th>ETO</th><th class="atocol">ATO</th><th class="noprint"></th>
+            <th>ETE<br>Leg</th><th>Σ Zeit</th><th>Σ NM</th><th class="etocol">ETO</th><th class="atocol">ATO</th><th class="noprint"></th>
           </tr>
         </thead>
         <tbody id="navbody"></tbody>
@@ -868,7 +875,7 @@ function legRow(d={}){
     <td><input class="tas" value="${d.tas||""}" oninput="recalc()" style="width:44px"></td>
     <td><input class="dist" value="${d.dist||""}" oninput="recalc()" style="width:48px"></td>
     <td class="wca"></td><td class="calc mh"></td><td class="gs"></td>
-    <td class="ete"></td><td class="acc"></td><td class="accd"></td><td class="eto"></td>
+    <td class="ete"></td><td class="acc"></td><td class="accd"></td><td class="eto etocol"></td>
     <td class="atocol"><input class="ato" value="${d.ato||""}" oninput="persist()"></td>
     <td class="noprint"><button class="rm" onclick="this.closest('tr').remove();recalc()">✕</button></td>`;
   return tr;
