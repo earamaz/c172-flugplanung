@@ -841,6 +841,8 @@ const norm360=a=>((a%360)+360)%360;
 const rad=d=>d*Math.PI/180, deg=r=>r*180/Math.PI;
 function hhmm(mins){if(!isFinite(mins)||mins<0)return"—";const t=Math.round(mins);const h=Math.floor(t/60);const m=t%60;return (h<10?"0":"")+h+":"+(m<10?"0":"")+m;}
 function addClock(base,mins){if(!base)return"";const[H,M]=base.split(":").map(Number);let tot=H*60+M+Math.round(mins);tot=((tot%1440)+1440)%1440;const h=Math.floor(tot/60),m=tot%60;return(h<10?"0":"")+h+":"+(m<10?"0":"")+m;}
+// zuletzt automatisch gesetzte Landing/On-Block-Werte – so überschreiben wir manuelle Korrekturen nicht
+let autoLanding="", autoOnblk="";
 
 // ---------- aircraft select ----------
 function fillAcSelect(){
@@ -1044,7 +1046,20 @@ function recalc(){
   $("tripTime").value=hhmm(totalTrip)+" h";
   $("totDist").value=fx(accDist,0)+" NM";
   // Lande-ETA = Take-Off + Trip (= letzter ETO + Anflug-Zuschlag)
-  $("etaLanding").value=addClock($("tot").value,totalTrip);
+  const suggLanding=addClock($("tot").value,totalTrip);
+  $("etaLanding").value=suggLanding;
+  // Landing automatisch aus Take-Off + Navlog-Flugzeit; On-Block = Landing + 5 min.
+  // Beides überschreibbar: nur setzen, wenn Feld leer ODER noch der zuletzt auto-gesetzte Wert (keine manuelle Korrektur).
+  if(suggLanding && totalTrip>0){
+    const lf=$("landing");
+    if(lf.value==="" || lf.value===autoLanding){ lf.value=suggLanding; autoLanding=suggLanding; }
+    const suggOn=addClock(lf.value,5);
+    const of=$("onblk");
+    if(of.value==="" || of.value===autoOnblk){ of.value=suggOn; autoOnblk=suggOn; }
+    // Blockzeit neu, da On-Block ggf. gerade gesetzt wurde
+    const bd2=clockDiff($("offblk").value,$("onblk").value);
+    $("blockTime").value = bd2==null ? "" : hhmm(bd2)+" h";
+  }
 
   // --- Ausweich-Leg (Ziel -> Ausweichplatz): MC (missweisend) + Wind -> WCA/MH/GS/Zeit ---
   $("altnRoute").textContent = (($("to").value||"?").toUpperCase())+" → "+(($("altn").value||"?").toUpperCase());
@@ -1300,6 +1315,7 @@ function saveState(){
 }
 function flash(t){const b=document.querySelector(".toolbar .primary");const o=b.textContent;b.textContent=t;setTimeout(()=>b.textContent=o,1200);}
 function applyState(s){
+  autoLanding=""; autoOnblk="";   // geladene Zeiten gelten als manuell, nicht überschreiben
   // Flugzeug-Stammdaten (Leermasse, MTOM, CG-Hüllkurve …) sind AUTORITATIV aus DEFAULTS (Code).
   // Ältere, in Plänen gespeicherte Profil-Snapshots dürfen sie NICHT überschreiben
   // (sonst käme z.B. beim Laden eines alten Plans die veraltete Leermasse zurück).
@@ -1397,6 +1413,7 @@ function seedDemo(){
 }
 function newFlight(){
   if(!confirm("Neuen Flug beginnen? ALLE Felder werden geleert (nur Flugzeug-Auswahl & Flugzeugprofile bleiben)."))return;
+  autoLanding=""; autoOnblk="";   // Auto-Zeiten zurücksetzen
   // JEDES Eingabefeld im Tool leeren (Login-Overlay liegt außerhalb .wrap)
   document.querySelectorAll(".wrap input, .wrap textarea").forEach(el=>{
     if(el.readOnly) return;                         // berechnete Felder (werden neu gerechnet)
