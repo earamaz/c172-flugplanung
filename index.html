@@ -52,6 +52,7 @@
   .r3{grid-template-columns:1fr 1fr 1fr}
   .r4{grid-template-columns:1fr 1fr 1fr 1fr}
   .r5{grid-template-columns:1fr 1fr 1fr 1fr 1fr}
+  .r6{grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr}
   .field{margin-bottom:8px}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{border:1px solid var(--line);padding:2px 4px;text-align:center}
@@ -360,10 +361,11 @@
         </tr></tbody>
       </table>
     </div>
-    <div class="note kb-hide">Ausweich-Leg (Ziel → Ausweichplatz), MC = missweisender Kurs. Für die Sprit-Reserve werden mind. 10 min angesetzt (wie LBA/Excel).</div>
-    <div class="row r5 kb-hide" style="margin-top:12px">
+    <div class="note kb-hide">Ausweich-Leg (Ziel → Ausweichplatz), MC = missweisender Kurs. Die Ausweich-Zeit enthält den „Zuschlag Ausweich" (Anflug am Ausweichplatz). Für die Sprit-Reserve werden mind. 10 min angesetzt (wie LBA/Excel).</div>
+    <div class="row r6 kb-hide" style="margin-top:12px">
       <div class="field"><label>Zuschlag Abflug (min)</label><input id="depMin" value="5" oninput="recalc()" title="Start/Ausflug bis Kursnahme – unkontrolliert ca. 5 min, kontrolliert ca. 10 min. Verschiebt alle ETO."></div>
       <div class="field"><label>Zuschlag Anflug (min)</label><input id="apprMin" value="10" oninput="recalc()" title="Platzrunde/Approach bis Landung – unkontrolliert ca. 5 min, kontrolliert ca. 10 min"></div>
+      <div class="field"><label>Zuschlag Ausweich (min)</label><input id="altApprMin" value="5" oninput="recalc()" title="Anflug am Ausweichplatz – bei kontrolliertem Feld (CTR, z.B. EDDG) mehr Zeit. Wird zur Ausweich-Zeit addiert und fließt in die Sprit-Reserve."></div>
       <div class="field"><label>Gesamt-Flugzeit (Trip)</label><input id="tripTime" class="calc" readonly></div>
       <div class="field"><label>Gesamt-Distanz</label><input id="totDist" class="calc" readonly></div>
       <div class="field"><label>Lande-ETA (Take-Off + Trip)</label><input id="etaLanding" class="calc" readonly></div>
@@ -1067,6 +1069,7 @@ function recalc(){
   {
     const mc=num($("altMc").value), awd=num($("altWd").value), awv=num($("altWv").value),
           atas=num($("altTas").value), adist=num($("altDist").value);
+    const altApprMin=num($("altApprMin").value)||0;   // Anflug-Zuschlag Ausweichplatz (CTR etc.)
     const setA=(id,v)=>$(id).textContent=v;
     if(isFinite(mc)&&isFinite(atas)&&atas>0){
       const relA=(isFinite(awd)&&isFinite(awv))?(awd-mc):0;
@@ -1077,7 +1080,7 @@ function recalc(){
       setA("altWca",(wcaA>=0?"+":"")+wcaA.toFixed(0));
       setA("altMh",mhA.toFixed(0).padStart(3,"0"));
       setA("altGs",gsA.toFixed(0));
-      if(isFinite(adist)&&gsA>0){altTimeMin=adist/gsA*60; setA("altTime",hhmm(altTimeMin));}
+      if(isFinite(adist)&&gsA>0){altTimeMin=adist/gsA*60+altApprMin; setA("altTime",hhmm(altTimeMin));}
       else setA("altTime","");
     } else {["altWca","altMh","altGs","altTime"].forEach(id=>setA(id,""));}
   }
@@ -1292,7 +1295,7 @@ function collect(){
     var:tr.querySelector(".var").value,tas:tr.querySelector(".tas").value,dist:tr.querySelector(".dist").value,
     eto:tr.querySelector(".eto-in").value,ato:tr.querySelector(".ato").value}));
   const f={};["ac","from","to","altn","date","pic","co","tot","offblk","landing","onblk",
-    "depMin","apprMin","altMc","altAlt","altWd","altWv","altTas","altDist","pFront","pRear","pC1","pC2","fuelL","taxiL",
+    "depMin","apprMin","altApprMin","altMc","altAlt","altWd","altWv","altTas","altDist","pFront","pRear","pC1","pC2","fuelL","taxiL",
     "dElev","dQnh","dOat","dRwy","dWd","dWv","dSurf","dSlope","dAvRoll","dAv15",
     "aElev","aQnh","aOat","aRwy","aWd","aWv","aSurf","aSlope","aAvRoll","aAv15",
     "crzAlt","descRate","descGs","patAlt","atis","enroute",
