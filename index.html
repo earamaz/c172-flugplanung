@@ -92,6 +92,17 @@
     padding:7px 10px;margin:8px 0 4px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-weight:600;font-size:13px}
   .folderhead:hover{border-color:var(--accent2)}
   .folderbody{padding-left:10px;border-left:2px solid var(--line);margin-left:4px}
+  /* Ordner-Auswahl-Dialog */
+  .fmodal{position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px}
+  .fmodal-box{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .fmodal-list{max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+  .fmodal-item{text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:10px 12px;cursor:pointer;font-size:14px}
+  .fmodal-item:hover{border-color:var(--accent2)}
+  .fmodal-item.cur{border-color:var(--accent2);font-weight:600}
+  #fmNew{width:100%;box-sizing:border-box;background:var(--input);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:10px 12px;font-size:14px}
+  #fmNew:focus{outline:none;border-color:var(--accent2)}
+  .fmodal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  .fmodal-actions .fm-ok{background:var(--accent);border-color:var(--accent);color:#fff}
   .kb-only{display:none}   /* Kniebrett-Kopf: nur im A5-Kniebrettdruck (body.kb) sichtbar */
   .kb-name{display:none}   /* Name im Footer: nur im Kniebrett (inline neben Uhrzeit) */
   .addbtn{margin-top:8px}
@@ -259,6 +270,19 @@
     <div class="auth-alt"><a id="authToggle">Erstes Mal? Konto anlegen</a> · <a id="authReset">Passwort vergessen?</a></div>
     <div class="auth-err" id="authErr"></div>
     <div class="auth-foot">© Eyüp Aramaz, 2026 · privat</div>
+  </div>
+</div>
+<!-- Ordner-Auswahl (statt prompt): bestehende Ordner anklicken oder neuen Namen eintippen -->
+<div id="folderModal" class="fmodal noprint" style="display:none">
+  <div class="fmodal-box">
+    <h2 style="margin:0 0 4px">Ordner wählen</h2>
+    <div class="mini" style="margin-bottom:10px">Bestehenden Ordner anklicken — oder unten einen neuen Namen eintippen.</div>
+    <div id="fmList" class="fmodal-list"></div>
+    <input id="fmNew" placeholder="Neuer Ordner (z.B. Datum oder Trip) …">
+    <div class="fmodal-actions">
+      <button type="button" onclick="fmCancel()">Abbrechen</button>
+      <button type="button" class="fm-ok" onclick="fmOk()">OK</button>
+    </div>
   </div>
 </div>
 <div class="wrap">
@@ -1349,18 +1373,44 @@ let lastFolder="";                                         // zuletzt benutzter 
 function setActive(id){activePlanId=id||null; if(id)localStorage.setItem(ACTIVE_KEY,id); else localStorage.removeItem(ACTIVE_KEY); renderPlans();}
 function getCollapsed(){try{return JSON.parse(localStorage.getItem("c172planner.collapsed"))||[];}catch(e){return[];}}
 function toggleFolder(name){let c=getCollapsed(); c=c.includes(name)?c.filter(x=>x!==name):c.concat([name]); localStorage.setItem("c172planner.collapsed",JSON.stringify(c)); renderPlans();}
-function askFolder(cur){let f=prompt("Ordner (optional — z.B. Datum oder Trip; leer = kein Ordner):", cur||lastFolder||""); if(f===null)return null; f=f.trim(); lastFolder=f; return f;}
-function movePlan(id){const a=loadPlans(),p=a.find(x=>x.id===id); if(!p)return; const f=askFolder(p.folder); if(f===null)return; p.folder=f; savePlansArr(a); renderPlans();}
+// Ordner-Auswahl-Dialog: bestehende Ordner anklicken oder neuen Namen eintippen.
+// Liefert ein Promise: String (""=Ohne Ordner) oder null (Abbrechen).
+let fmResolve=null;
+function askFolder(cur){
+  return new Promise(res=>{
+    fmResolve=res;
+    const names=[...new Set(loadPlans().map(p=>(p.folder||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"));
+    const list=$("fmList"); list.innerHTML="";
+    const mk=(label,val)=>{const b=document.createElement("button");b.type="button";b.className="fmodal-item";b.textContent=label;b.onclick=()=>fmDone(val);return b;};
+    list.appendChild(mk("Ohne Ordner",""));
+    const curTrim=(cur||"").trim();
+    names.forEach(n=>{const b=mk(n,n); if(n===curTrim)b.classList.add("cur"); list.appendChild(b);});
+    const inp=$("fmNew"); inp.value=curTrim||lastFolder||"";
+    $("folderModal").style.display="flex";
+    setTimeout(()=>{inp.focus(); inp.select();},50);
+  });
+}
+function fmDone(val){
+  $("folderModal").style.display="none";
+  const r=fmResolve; fmResolve=null;
+  if(val!==null)lastFolder=val;
+  if(r)r(val);
+}
+function fmOk(){ fmDone($("fmNew").value.trim()); }
+function fmCancel(){ fmDone(null); }
+$("folderModal").addEventListener("click",e=>{ if(e.target.id==="folderModal")fmCancel(); });
+$("fmNew").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();fmOk();} else if(e.key==="Escape"){e.preventDefault();fmCancel();} });
+async function movePlan(id){const a=loadPlans(),p=a.find(x=>x.id===id); if(!p)return; const f=await askFolder(p.folder); if(f===null)return; p.folder=f; savePlansArr(a); renderPlans();}
 function loadPlans(){try{return JSON.parse(localStorage.getItem(PLANS_KEY))||[];}catch(e){return[];}}
 function savePlansArr(a){localStorage.setItem(PLANS_KEY,JSON.stringify(a));}
 function escHtml(s){return (s==null?"":s+"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function fmtWhen(iso){try{return new Date(iso).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});}catch(e){return"";}}
-function savePlanAs(){
+async function savePlanAs(){
   const from=($("from").value||"?").toUpperCase(), to=($("to").value||"?").toUpperCase(), ac=$("ac").value;
   const def=from+" → "+to;
   let name=prompt("Plan speichern als:", def); if(name===null)return;
   name=name.trim()||def;
-  const folder=askFolder(""); if(folder===null)return;
+  const folder=await askFolder(""); if(folder===null)return;
   const a=loadPlans();
   const entry={id:String(Date.now()),name,folder,from,to,ac,savedAt:new Date().toISOString(),state:collect()};
   const idx=a.findIndex(p=>(p.name||"").toLowerCase()===name.toLowerCase());
@@ -1475,7 +1525,7 @@ renderPlans();
     const def=from+" → "+to;
     let name=prompt("Plan speichern als:",def); if(name===null)return;
     name=name.trim()||def;
-    const folder=askFolder(""); if(folder===null)return;
+    const folder=await askFolder(""); if(folder===null)return;
     const existing=PLANS.find(p=>(p.name||"").toLowerCase()===name.toLowerCase());
     if(existing && !confirm("Plan „"+name+"“ existiert schon — überschreiben?"))return;
     const id=existing?existing.id:String(Date.now());
@@ -1508,7 +1558,7 @@ renderPlans();
   }
   async function fbMovePlan(id){
     const p=PLANS.find(x=>x.id===id); if(!p)return;
-    const f=askFolder(p.folder); if(f===null)return;
+    const f=await askFolder(p.folder); if(f===null)return;
     try{ await plansCol.doc(id).update({folder:f}); }
     catch(e){ alert("Verschieben fehlgeschlagen: "+(e&&e.message)); }
   }
