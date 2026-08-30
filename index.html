@@ -82,9 +82,9 @@
   .sub{font-weight:700;font-size:13px;margin-bottom:6px;color:#cfe0ee}
   body.light .sub{color:#26456a}
   .src-note{margin-bottom:10px;padding:7px 10px;border-radius:8px;background:var(--panel2);border:1px solid var(--line)}
-  .planrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;
+  .planrow{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;
     border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:var(--panel2)}
-  .planbtns{display:flex;gap:6px;flex-shrink:0}
+  .planbtns{display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;justify-content:flex-end}
   .pdel{color:#ff8f8f}
   .planactive{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
   .activebadge{color:var(--accent);font-weight:700}
@@ -1331,10 +1331,21 @@ function collect(){
   return{prof:PROF,fields:f,legs,createdAt};
 }
 function persist(){localStorage.setItem(KEY,JSON.stringify(collect()));}
+// Sicherheitsnetz: 💾 überschreibt den AKTIVEN Plan. Wenn der Arbeitsstand inzwischen eine
+// andere Route ist (anderes von→nach), erst nachfragen — sonst geht der alte Plan verloren.
+function confirmOverwrite(p){
+  // Alt-Pläne ohne gespeicherte Routen-Metadaten: nichts zu vergleichen -> kein (Fehl-)Alarm
+  if((!p.from||p.from==="?") && (!p.to||p.to==="?")) return true;
+  const curF=($("from").value||"?").toUpperCase(), curT=($("to").value||"?").toUpperCase();
+  const pF=(p.from||"?").toUpperCase(), pT=(p.to||"?").toUpperCase();
+  if(pF===curF && pT===curT) return true;
+  return confirm("ACHTUNG: Der aktive Plan „"+p.name+"“ ist "+pF+" → "+pT+", dein aktueller Arbeitsstand ist aber "+curF+" → "+curT+".\n\nOK = Plan „"+p.name+"“ wird mit der neuen Route ÜBERSCHRIEBEN (alte Daten weg).\nNeuer Flug? Dann Abbrechen und „＋ Aktuellen Plan speichern“ nutzen.");
+}
 function saveState(){
   persist();  // Arbeitsstand (Auto-Restore)
   const a=loadPlans(), p=activePlanId?a.find(x=>x.id===activePlanId):null;
   if(p){  // aktiven Plan überschreiben
+    if(!confirmOverwrite(p))return;
     p.state=collect(); p.savedAt=new Date().toISOString();
     p.from=($("from").value||"?").toUpperCase(); p.to=($("to").value||"?").toUpperCase(); p.ac=$("ac").value;
     a.sort((x,y)=>(y.savedAt||"").localeCompare(x.savedAt||""));
@@ -1401,6 +1412,28 @@ function fmCancel(){ fmDone(null); }
 $("folderModal").addEventListener("click",e=>{ if(e.target.id==="folderModal")fmCancel(); });
 $("fmNew").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();fmOk();} else if(e.key==="Escape"){e.preventDefault();fmCancel();} });
 async function movePlan(id){const a=loadPlans(),p=a.find(x=>x.id===id); if(!p)return; const f=await askFolder(p.folder); if(f===null)return; p.folder=f; savePlansArr(a); renderPlans();}
+// „Name (Kopie)“, bei Kollision „Name (Kopie 2)“, „(Kopie 3)“ …
+function uniqueCopyName(base,names){
+  const lower=names.map(n=>(n||"").toLowerCase());
+  let cand=base+" (Kopie)", i=2;
+  while(lower.includes(cand.toLowerCase())){cand=base+" (Kopie "+(i++)+")";}
+  return cand;
+}
+function dupPlan(id){
+  const a=loadPlans(),p=a.find(x=>x.id===id); if(!p)return;
+  const copy=structuredClone(p);
+  copy.id=String(Date.now());
+  copy.name=uniqueCopyName(p.name,a.map(x=>x.name));
+  copy.savedAt=new Date().toISOString();
+  a.push(copy); savePlansArr(a); renderPlans(); flash("Kopie erstellt ✓");
+}
+function renamePlan(id){
+  const a=loadPlans(),p=a.find(x=>x.id===id); if(!p)return;
+  let n=prompt("Neuer Name für den Plan:",p.name); if(n===null)return;
+  n=n.trim(); if(!n)return;
+  if(a.some(x=>x.id!==id&&(x.name||"").toLowerCase()===n.toLowerCase())){alert("Es gibt schon einen Plan mit dem Namen „"+n+"“ — bitte einen anderen Namen wählen.");return;}
+  p.name=n; savePlansArr(a); renderPlans();
+}
 function loadPlans(){try{return JSON.parse(localStorage.getItem(PLANS_KEY))||[];}catch(e){return[];}}
 function savePlansArr(a){localStorage.setItem(PLANS_KEY,JSON.stringify(a));}
 function escHtml(s){return (s==null?"":s+"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -1422,7 +1455,7 @@ function planRowHtml(p){
   return `<div class="planrow${p.id===activePlanId?' planactive':''}">
     <div><b>${escHtml(p.name)}</b> ${p.id===activePlanId?'<span class="mini activebadge">● aktiv</span>':''} <span class="mini">· ${escHtml((p.from||"?")+"→"+(p.to||"?"))} · ${escHtml(p.ac||"")}</span><br>
       <span class="mini">zuletzt gespeichert: ${fmtWhen(p.savedAt)}</span></div>
-    <div class="planbtns"><button onclick="loadPlan('${p.id}')">Laden</button><button title="In Ordner verschieben" onclick="movePlan('${p.id}')">Ordner</button><button class="pdel" onclick="deletePlan('${p.id}')">Löschen</button></div>
+    <div class="planbtns"><button onclick="loadPlan('${p.id}')">Laden</button><button title="Kopie dieses Plans anlegen — „${escHtml(p.name)} (Kopie)“" onclick="dupPlan('${p.id}')">Duplizieren</button><button title="Plan umbenennen" onclick="renamePlan('${p.id}')">Umbenennen</button><button title="In Ordner verschieben" onclick="movePlan('${p.id}')">Ordner</button><button class="pdel" onclick="deletePlan('${p.id}')">Löschen</button></div>
   </div>`;
 }
 function renderPlans(){
@@ -1538,6 +1571,7 @@ renderPlans();
     if(!activePlanId){ flash("Gespeichert ✓"); return; }
     const p=PLANS.find(x=>x.id===activePlanId);
     if(!p){ flash("Gespeichert ✓"); return; }
+    if(!confirmOverwrite(p))return;
     try{ await plansCol.doc(activePlanId).set({name:p.name, folder:p.folder||"",
         from:($("from").value||"?").toUpperCase(), to:($("to").value||"?").toUpperCase(), ac:$("ac").value,
         savedAt:new Date().toISOString(), state:JSON.stringify(collect())});
@@ -1562,10 +1596,28 @@ renderPlans();
     try{ await plansCol.doc(id).update({folder:f}); }
     catch(e){ alert("Verschieben fehlgeschlagen: "+(e&&e.message)); }
   }
+  async function fbDupPlan(id){
+    const p=PLANS.find(x=>x.id===id); if(!p)return;
+    const name=uniqueCopyName(p.name,PLANS.map(x=>x.name));
+    try{ await plansCol.doc(String(Date.now())).set({
+        name, folder:p.folder||"", from:p.from||"", to:p.to||"", ac:p.ac||"",
+        savedAt:new Date().toISOString(),
+        state: typeof p.state==="string" ? p.state : JSON.stringify(p.state)});
+      flash("Kopie erstellt ✓"); }
+    catch(e){ alert("Duplizieren fehlgeschlagen: "+(e&&e.message)); }
+  }
+  async function fbRenamePlan(id){
+    const p=PLANS.find(x=>x.id===id); if(!p)return;
+    let n=prompt("Neuer Name für den Plan:",p.name); if(n===null)return;
+    n=n.trim(); if(!n)return;
+    if(PLANS.some(x=>x.id!==id&&(x.name||"").toLowerCase()===n.toLowerCase())){alert("Es gibt schon einen Plan mit dem Namen „"+n+"“ — bitte einen anderen Namen wählen.");return;}
+    try{ await plansCol.doc(id).update({name:n}); }
+    catch(e){ alert("Umbenennen fehlgeschlagen: "+(e&&e.message)); }
+  }
 
   function activateCloud(user){
     plansCol=db.collection("c172Plans").doc(user.uid).collection("plans");
-    loadPlans=fbLoadPlans; savePlanAs=fbSavePlanAs; saveState=fbSaveState; loadPlan=fbLoadPlan; deletePlan=fbDeletePlan; movePlan=fbMovePlan;
+    loadPlans=fbLoadPlans; savePlanAs=fbSavePlanAs; saveState=fbSaveState; loadPlan=fbLoadPlan; deletePlan=fbDeletePlan; movePlan=fbMovePlan; dupPlan=fbDupPlan; renamePlan=fbRenamePlan;
     subscribe();
     document.getElementById("authOverlay").style.display="none";
     // Abmelden-Button in die Toolbar
