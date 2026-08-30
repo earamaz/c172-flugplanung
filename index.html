@@ -114,6 +114,9 @@
   .flag{font-weight:700}
   .flag.ok{color:#5fd39e}.flag.no{color:#ff8f8f}
   .rm{color:#ff8f8f;background:transparent;border:none;font-size:16px;padding:0 6px;cursor:pointer}
+  .rowtools{white-space:nowrap}
+  .rt{color:var(--muted);background:transparent;border:none;font-size:14px;padding:0 3px;cursor:pointer}
+  .rt:hover{color:var(--txt)}
   @media print{
     @page{size:A4 landscape;margin:6mm}
     :root,body.light{--bg:#fff;--panel:#fff;--panel2:#fff;--txt:#000;--muted:#222;--line:#888;--input:#fff;
@@ -299,7 +302,7 @@
       <button onclick="newFlight()">Neuer Flug</button>
       <button onclick="window.print()">Drucken / PDF (A4)</button>
       <button onclick="printKneeboard()" title="Kompaktes A5-Blatt fürs Kniebrett: Navlog + Frequenzen + ATIS, mit ETO/ATO zum Reinschreiben">Kniebrett (A5)</button>
-      <button class="primary" onclick="saveState()">Speichern</button>
+      <button class="primary" onclick="saveState(true)">Speichern</button>
     </div>
   </header>
 
@@ -906,8 +909,21 @@ function legRow(d={}){
     <td class="ete"></td><td class="acc"></td><td class="accd"></td>
     <td class="etocol"><input class="eto-in" value="${d.eto||""}" oninput="persist()"></td>
     <td class="atocol"><input class="ato" value="${d.ato||""}" oninput="persist()"></td>
-    <td class="noprint"><button class="rm" onclick="this.closest('tr').remove();recalc()">✕</button></td>`;
+    <td class="noprint rowtools"><button class="rt" title="Zeile nach oben" onclick="moveLeg(this,-1)">↑</button><button class="rt" title="Zeile nach unten" onclick="moveLeg(this,1)">↓</button><button class="rt" title="Leere Zeile darunter einfügen" onclick="insertLegBelow(this)">＋</button><button class="rm" title="Zeile löschen" onclick="this.closest('tr').remove();recalc();persist()">✕</button></td>`;
   return tr;
+}
+// Navlog-Zeile verschieben (↑/↓). Die fixe Startplatz-Zeile (deprow) bleibt immer oben.
+function moveLeg(btn,dir){
+  const tr=btn.closest("tr"), body=$("navbody");
+  if(dir<0){ const prev=tr.previousElementSibling; if(!prev||prev.classList.contains("deprow"))return; body.insertBefore(tr,prev); }
+  else     { const next=tr.nextElementSibling; if(!next)return; body.insertBefore(next,tr); }
+  recalc(); persist();
+}
+// Leere Zeile direkt unter dieser Zeile einfügen (z.B. um dazwischen einen Wegpunkt zu planen)
+function insertLegBelow(btn){
+  const tr=btn.closest("tr");
+  tr.after(legRow({}));
+  recalc(); persist();
 }
 function addLeg(d){$("navbody").appendChild(legRow(d));recalc();}
 // Kniebrett-Druck: A5 hoch, nur Flugkopf + Navlog (reduziert) + Frequenzen + ATIS
@@ -1341,11 +1357,12 @@ function confirmOverwrite(p){
   if(pF===curF && pT===curT) return true;
   return confirm("ACHTUNG: Der aktive Plan „"+p.name+"“ ist "+pF+" → "+pT+", dein aktueller Arbeitsstand ist aber "+curF+" → "+curT+".\n\nOK = Plan „"+p.name+"“ wird mit der neuen Route ÜBERSCHRIEBEN (alte Daten weg).\nNeuer Flug? Dann Abbrechen und „＋ Aktuellen Plan speichern“ nutzen.");
 }
-function saveState(){
+function saveState(explicit){
   persist();  // Arbeitsstand (Auto-Restore)
   const a=loadPlans(), p=activePlanId?a.find(x=>x.id===activePlanId):null;
   if(p){  // aktiven Plan überschreiben
-    if(!confirmOverwrite(p))return;
+    // Schutz-Dialog nur beim expliziten 💾-Klick — nicht bei internen Aufrufen (z.B. Profil-Editor)
+    if(explicit && !confirmOverwrite(p))return;
     p.state=collect(); p.savedAt=new Date().toISOString();
     p.from=($("from").value||"?").toUpperCase(); p.to=($("to").value||"?").toUpperCase(); p.ac=$("ac").value;
     a.sort((x,y)=>(y.savedAt||"").localeCompare(x.savedAt||""));
@@ -1566,12 +1583,12 @@ renderPlans();
       setActive(id); flash("Plan gespeichert ✓"); }
     catch(e){ alert("Speichern fehlgeschlagen: "+(e&&e.message)); }
   }
-  async function fbSaveState(){
+  async function fbSaveState(explicit){
     persist();                              // Arbeitsstand lokal
     if(!activePlanId){ flash("Gespeichert ✓"); return; }
     const p=PLANS.find(x=>x.id===activePlanId);
     if(!p){ flash("Gespeichert ✓"); return; }
-    if(!confirmOverwrite(p))return;
+    if(explicit && !confirmOverwrite(p))return;   // nur beim expliziten 💾-Klick nachfragen
     try{ await plansCol.doc(activePlanId).set({name:p.name, folder:p.folder||"",
         from:($("from").value||"?").toUpperCase(), to:($("to").value||"?").toUpperCase(), ac:$("ac").value,
         savedAt:new Date().toISOString(), state:JSON.stringify(collect())});
