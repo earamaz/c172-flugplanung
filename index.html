@@ -348,20 +348,21 @@
     <div class="navwrap kb-hide">
       <table id="altTable">
         <thead><tr>
-          <th>MC<br>°</th><th>Alt<br>ft</th><th>Wind<br>°/kt</th><th>TAS<br>kt</th><th>Dist<br>NM</th>
+          <th>TC<br>°</th><th>Alt<br>ft</th><th>Wind<br>°/kt</th><th>VAR<br>°</th><th>TAS<br>kt</th><th>Dist<br>NM</th>
           <th>WCA<br>°</th><th class="calc">MH<br>°</th><th>GS<br>kt</th><th>Zeit</th>
         </tr></thead>
         <tbody><tr>
-          <td><input id="altMc" oninput="recalc()" style="width:52px"></td>
+          <td><input id="altTc" oninput="recalc()" style="width:52px"></td>
           <td><input id="altAlt" oninput="recalc()" style="width:56px"></td>
           <td><input id="altWd" oninput="recalc()" style="width:36px" placeholder="°">/<input id="altWv" oninput="recalc()" style="width:32px" placeholder="kt"></td>
+          <td><input id="altVar" oninput="recalc()" style="width:44px"></td>
           <td><input id="altTas" oninput="recalc()" style="width:52px"></td>
           <td><input id="altDist" oninput="recalc()" style="width:54px"></td>
           <td class="calc" id="altWca"></td><td class="calc" id="altMh"></td><td class="calc" id="altGs"></td><td class="calc" id="altTime"></td>
         </tr></tbody>
       </table>
     </div>
-    <div class="note kb-hide">Ausweich-Leg (Ziel → Ausweichplatz), MC = missweisender Kurs. Die Ausweich-Zeit enthält den „Zuschlag Ausweich" (Anflug am Ausweichplatz). Für die Sprit-Reserve werden mind. 10 min angesetzt (wie LBA/Excel).</div>
+    <div class="note kb-hide">Ausweich-Leg (Ziel → Ausweichplatz), TC = rechtweisender Kurs von der Karte (wie im Navlog); MH = TC + WCA − VAR. Die Ausweich-Zeit enthält den „Zuschlag Ausweich" (Anflug am Ausweichplatz). Für die Sprit-Reserve werden mind. 10 min angesetzt (wie LBA/Excel).</div>
     <div class="row r6 kb-hide" style="margin-top:12px">
       <div class="field"><label>Zuschlag Abflug (min)</label><input id="depMin" value="5" oninput="recalc()" title="Start/Ausflug bis Kursnahme – unkontrolliert ca. 5 min, kontrolliert ca. 10 min. Verschiebt alle ETO."></div>
       <div class="field"><label>Zuschlag Anflug (min)</label><input id="apprMin" value="10" oninput="recalc()" title="Platzrunde/Approach bis Landung – unkontrolliert ca. 5 min, kontrolliert ca. 10 min"></div>
@@ -1063,20 +1064,20 @@ function recalc(){
     $("blockTime").value = bd2==null ? "" : hhmm(bd2)+" h";
   }
 
-  // --- Ausweich-Leg (Ziel -> Ausweichplatz): MC (missweisend) + Wind -> WCA/MH/GS/Zeit ---
+  // --- Ausweich-Leg (Ziel -> Ausweichplatz): TC (rechtweisend, von der Karte) + Wind -> WCA/MH/GS/Zeit ---
   $("altnRoute").textContent = (($("to").value||"?").toUpperCase())+" → "+(($("altn").value||"?").toUpperCase());
   let altTimeMin=NaN;
   {
-    const mc=num($("altMc").value), awd=num($("altWd").value), awv=num($("altWv").value),
-          atas=num($("altTas").value), adist=num($("altDist").value);
+    const tcA=num($("altTc").value), awd=num($("altWd").value), awv=num($("altWv").value),
+          avar=num($("altVar").value)||0, atas=num($("altTas").value), adist=num($("altDist").value);
     const altApprMin=num($("altApprMin").value)||0;   // Anflug-Zuschlag Ausweichplatz (CTR etc.)
     const setA=(id,v)=>$(id).textContent=v;
-    if(isFinite(mc)&&isFinite(atas)&&atas>0){
-      const relA=(isFinite(awd)&&isFinite(awv))?(awd-mc):0;
+    if(isFinite(tcA)&&isFinite(atas)&&atas>0){
+      const relA=(isFinite(awd)&&isFinite(awv))?(awd-tcA):0;
       const wvA=isFinite(awv)?awv:0;
       const wcaA=deg(Math.asin(Math.max(-1,Math.min(1, wvA*Math.sin(rad(relA))/atas))));
       const gsA=atas*Math.cos(rad(wcaA))-wvA*Math.cos(rad(relA));
-      const mhA=norm360(mc+wcaA);   // MC ist bereits missweisend -> MH = MC + WCA (kein VAR)
+      const mhA=norm360(tcA+wcaA-avar);   // wie Haupt-Navlog: MH = TC + WCA − VAR (Ost = +)
       setA("altWca",(wcaA>=0?"+":"")+wcaA.toFixed(0));
       setA("altMh",mhA.toFixed(0).padStart(3,"0"));
       setA("altGs",gsA.toFixed(0));
@@ -1295,7 +1296,7 @@ function collect(){
     var:tr.querySelector(".var").value,tas:tr.querySelector(".tas").value,dist:tr.querySelector(".dist").value,
     eto:tr.querySelector(".eto-in").value,ato:tr.querySelector(".ato").value}));
   const f={};["ac","from","to","altn","date","pic","co","tot","offblk","landing","onblk",
-    "depMin","apprMin","altApprMin","altMc","altAlt","altWd","altWv","altTas","altDist","pFront","pRear","pC1","pC2","fuelL","taxiL",
+    "depMin","apprMin","altApprMin","altTc","altVar","altAlt","altWd","altWv","altTas","altDist","pFront","pRear","pC1","pC2","fuelL","taxiL",
     "dElev","dQnh","dOat","dRwy","dWd","dWv","dSurf","dSlope","dAvRoll","dAv15",
     "aElev","aQnh","aOat","aRwy","aWd","aWv","aSurf","aSlope","aAvRoll","aAv15",
     "crzAlt","descRate","descGs","patAlt","atis","enroute",
