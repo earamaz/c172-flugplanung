@@ -964,12 +964,20 @@ function printKneeboard(){
   var pg=$("kbPage"); if(pg) pg.textContent="@page{size:A5 portrait;margin:11mm}";
   window.print();
 }
-// Greift bei beiden Druck-Buttons und bei Cmd+P: Fussnote = Zeitpunkt des Ausdrucks (UTC).
-window.addEventListener("beforeprint",stampPrintTime);
+// Greift bei beiden Druck-Buttons und bei Cmd+P: Fussnote = Zeitpunkt des Ausdrucks (UTC),
+// Dateiname beim PDF-Export = VON_NACH_C172_KENNZ_Aramaz (Browser nimmt document.title).
+const PAGE_TITLE=document.title;
+function pdfFileName(){
+  const clean=s=>(s||"").toUpperCase().replace(/[^A-Z0-9]/g,"");   // "D-ETLB" -> "DETLB"
+  const t=((cur()||{}).type||""); const typ=/172/.test(t)?"C172":clean(t);   // C172R/S -> C172
+  return [clean($("from").value),clean($("to").value),typ,clean($("cs").value),"Aramaz"].filter(Boolean).join("_");
+}
+window.addEventListener("beforeprint",function(){stampPrintTime();document.title=pdfFileName();});
 window.addEventListener("afterprint",function(){
   document.body.classList.remove("kb");
   var pg=$("kbPage"); if(pg) pg.textContent="";
   updateCreatedDisp();   // am Bildschirm wieder den Plan-Zeitstempel zeigen
+  document.title=PAGE_TITLE;
 });
 // Rückflug: Route umkehren. Kurse +180°, Wind/VAR/TAS bleiben (Wind ist ortsfest!),
 // Von/Nach + Platzdaten (Start/Landung) getauscht, Zeiten geleert.
@@ -1541,6 +1549,17 @@ function newFlight(){
   $("navbody").innerHTML=""; addLeg();
   fillProfEditor(); loadAircraft(); recalc();
 }
+
+// Passwort-Manager (LastPass/1Password) haengen wegen des Login-Overlays ihre Icons an alle
+// Textfelder. Alle Planer-Felder markieren; nur die echten Login-Felder (#authOverlay) bleiben frei.
+function lpIgnore(root){
+  const mark=el=>{if(el.closest("#authOverlay"))return;el.setAttribute("data-lpignore","true");el.setAttribute("data-1p-ignore","");};
+  if(root.matches&&root.matches("input,textarea,select"))mark(root);
+  if(root.querySelectorAll)root.querySelectorAll("input,textarea,select").forEach(mark);
+}
+lpIgnore(document);
+new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1)lpIgnore(n);})))
+  .observe(document.body,{childList:true,subtree:true});
 
 // init
 applyTheme(localStorage.getItem("c172theme") || "dark");
