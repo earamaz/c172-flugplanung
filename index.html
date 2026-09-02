@@ -120,6 +120,10 @@
   .pgbrk{display:none}
   @media print{
     @page{size:A4 landscape;margin:7mm}
+    /* Passwort-Manager-Overlays (LastPass/1Password) duerfen nie mitdrucken */
+    [data-lastpass-icon-root],[data-lastpass-root],[id^="__lpform_"],[class*="lastpass"],
+    com-1password-button,[data-1p-icon]{display:none!important}
+    input,textarea{background-image:none!important}
     :root,body.light{--bg:#fff;--panel:#fff;--panel2:#fff;--txt:#000;--muted:#222;--line:#888;--input:#fff;
       --grid:#ddd;--env-bg:#fff;--calc-bg:#eee;--calc-txt:#000}
     body{font-size:9px;line-height:1.15}
