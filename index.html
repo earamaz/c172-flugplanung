@@ -52,6 +52,7 @@
   .r3{grid-template-columns:1fr 1fr 1fr}
   .r4{grid-template-columns:1fr 1fr 1fr 1fr}
   .r5{grid-template-columns:1fr 1fr 1fr 1fr 1fr}
+  @media screen and (max-width:700px){.r3,.r4,.r5{grid-template-columns:1fr 1fr}}
   .r6{grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr}
   .field{margin-bottom:8px}
   table{width:100%;border-collapse:collapse;font-size:13px}
@@ -478,7 +479,7 @@
   <div id="kbPerf" class="kb-only">
     <div class="kbp-grid">
       <div class="kbp-box">
-        <div class="kbp-h">Start (Abflug)</div>
+        <div class="kbp-h">Start (Abflug) <span id="kbFlaps" style="font-weight:400"></span></div>
         <div class="kbp-line"><span>Piste in Nutzung</span><span class="kbp-write" id="kbRwyDep"></span></div>
         <div class="kbp-line"><span>Rollstrecke</span><b id="kbToRoll"></b></div>
         <div class="kbp-line"><span>über 15 m</span><b id="kbToObst"></b></div>
@@ -565,10 +566,11 @@
     <div class="grid">
       <div>
         <div class="sub">Start (Abflug)</div>
-        <div class="row r3">
+        <div class="row r4">
           <div class="field"><label>Platzhöhe (ft)</label><input id="dElev" value="450" oninput="recalc()"></div>
           <div class="field"><label>QNH (hPa)</label><input id="dQnh" value="1013" oninput="recalc()"></div>
           <div class="field"><label>OAT (°C)</label><input id="dOat" value="15" oninput="recalc()"></div>
+          <div class="field"><label>Startklappen</label><select id="dFlaps" onchange="recalc()" title="POH-Tabelle = Short-Field-Technik mit Flaps 10° (Vollgas vor Bremsenlösen, 51/57 KIAS). Flaps 0°: lt. POH Sec. 4 ca. +11 % — Untergrenze, gilt weiterhin für Short-Field-Technik; ein normaler rollender Start mit 70–80 KIAS Steigflug ist länger (im POH nicht beziffert)."><option value="0">0° (mind. +11 %)</option><option value="10">10° Short Field</option></select></div>
         </div>
         <div class="row r3">
           <div class="field"><label>Piste (°)</label><input id="dRwy" placeholder="z.B. 250" oninput="recalc()"></div>
@@ -620,7 +622,7 @@
         </div>
       </div>
     </div>
-    <div class="note" style="margin-top:8px">Short-Field-Technik. Korrekturen lt. POH: Gegenwind −10 %/9 kt, Rückenwind +10 %/2 kt, Gras trocken +15 % (Start) bzw. +45 % (Landung) auf die Rollstrecke. Gras nass/weich +30 % / +60 % (Faustregel, <i>nicht POH</i>). Kalt/leicht wird konservativ auf Tabellenränder begrenzt. <b>Neigung:</b> Faustregel +10 % Rollstrecke je 1 % ungünstiger Steigung (Start) / Gefälle (Landung) — <i>nicht im POH</i>, günstige Neigung ohne Bonus. Bahnlängen aus AIP eingeben für die „reicht / zu kurz"-Prüfung.</div>
+    <div class="note" style="margin-top:8px">POH-Tabelle = Short-Field-Technik (Flaps 10°, Vollgas vor Bremsenlösen, 51/57 KIAS). <b>Startklappen 0°</b> = Tabelle <b>+11 %</b> lt. POH Sec. 4 („10° flaps reduce ground roll and total distance by approximately 10 percent") — das ist die <b>Untergrenze</b>: sie setzt weiterhin Short-Field-Technik voraus; ein normaler Start (rollend, Steigflug 70–80 KIAS) ist länger und im POH nicht beziffert. Korrekturen lt. POH: Gegenwind −10 %/9 kt, Rückenwind +10 %/2 kt, Gras trocken +15 % (Start) bzw. +45 % (Landung) auf die Rollstrecke. Gras nass/weich +30 % / +60 % (Faustregel, <i>nicht POH</i>). Kalt/leicht wird konservativ auf Tabellenränder begrenzt. <b>Neigung:</b> Faustregel +10 % Rollstrecke je 1 % ungünstiger Steigung (Start) / Gefälle (Landung) — <i>nicht im POH</i>, günstige Neigung ohne Bonus. Bahnlängen aus AIP eingeben für die „reicht / zu kurz"-Prüfung.</div>
   </div>
 
   <!-- CLIMB / DESCENT -->
@@ -966,6 +968,7 @@ function fillKbPerf(){
   var od=g("todDist"),oa=g("todAlt"); $("kbTod").textContent=(od||oa)?((od||"—")+" · "+(oa||"—")):"—";
   var pa=($("patAlt")&&$("patAlt").value||"").trim(); $("kbPat").textContent=pa?(pa+" ft ü. Platz"):"—";
   var dm=($("depMin")&&$("depMin").value||"").trim(); $("kbDepMin").textContent=dm?(dm+" min"):"—";
+  $("kbFlaps").textContent=($("dFlaps")&&$("dFlaps").value==="10")?"· Flaps 10°":"· Flaps 0°";   // kurz: muss in die 7-px-Ueberschrift der A5-Box passen (sonst 2. Seite)
   var am=($("apprMin")&&$("apprMin").value||"").trim(); $("kbApprMin").textContent=am?(am+" min"):"—";
   // Piste in Nutzung: leer zum Handeintrag am Flugtag (kbRwyDep/kbRwyArr bleiben leer)
 }
@@ -1038,6 +1041,7 @@ function invertFlight(){
   ].forEach(([a,b])=>swap(a,b));
   // tatsächliche Zeiten leeren (neuer Flug)
   ["offblk","tot","landing","onblk"].forEach(k=>$(k).value="");
+  if($("dFlaps"))$("dFlaps").value="0";   // neuer Abflugplatz -> konservativ Flaps 0
   // Rückflug ist ein NEUER Flug -> vom Quell-Plan lösen, damit „Speichern" ihn nicht überschreibt
   createdAt=new Date().toISOString(); updateCreatedDisp();
   setActive(null);
@@ -1222,11 +1226,14 @@ function recalc(){
 // ---------- takeoff/landing + climb/descent ----------
 function calcPerf(p,tomMass,ldmMass){
   const pd=PERF[p.perf]||PERF.S;
+  // Startklappen: POH-Tabelle = Flaps 10 (Short Field). POH Sec. 4: "Using 10° wing flaps reduces the ground roll
+  // and total distance over an obstacle by approximately 10 percent" -> Flaps 0 = Tabelle / 0,9 (+11 %).
+  const flap0 = !$("dFlaps") || $("dFlaps").value!=="10";
   // neutral data-source note
   const note=$("perfNote");
   note.style.display="block";
   note.className="note src-note";
-  note.innerHTML="Datenbasis: <b>"+pd.src+"</b> für "+p.reg+" ("+p.type+").";
+  note.innerHTML="Datenbasis: <b>"+pd.src+"</b> für "+p.reg+" ("+p.type+") · Startklappen <b>"+(flap0?"0° — mind. +11 % lt. POH Sec. 4 (Short-Field-Technik ohne Klappen; normaler Start länger)":"10° — Short Field, POH-Tabelle")+"</b>.";
 
   const D=(ft)=>fx(ft*FT_M,0)+" m <span class='mini'>("+fx(ft,0)+" ft)</span>";
   // --- Takeoff ---
@@ -1240,6 +1247,7 @@ function calcPerf(p,tomMass,ldmMass){
   else $("dWind").textContent="—";
   if(isFinite(dOat)){
     let [gr,tot]=takeoffFt(pd,tomLb,dPA,dOat);
+    if(flap0){ gr/=0.9; tot/=0.9; }   // Flaps 0: +11 % auf Rollstrecke und 15-m-Strecke (vor Wind/Belag/Neigung)
     [gr,tot]=windCorr(gr,tot, dw?dw.head:0, surfAdd($("dSurf").value,false), false, num($("dSlope").value));
     $("dRoll").innerHTML=D(gr); $("dObst").innerHTML=D(tot);
     runwayCheck(num($("dAvRoll").value),num($("dAv15").value),gr,tot,"dAvail","dMarge");
@@ -1369,7 +1377,7 @@ function collect(){
     eto:tr.querySelector(".eto-in").value,ato:tr.querySelector(".ato").value}));
   const f={};["ac","from","to","altn","date","pic","co","tot","offblk","landing","onblk",
     "depMin","apprMin","altApprMin","altTc","altVar","altAlt","altWd","altWv","altTas","altDist","pFront","pRear","pC1","pC2","fuelL","taxiL",
-    "dElev","dQnh","dOat","dRwy","dWd","dWv","dSurf","dSlope","dAvRoll","dAv15",
+    "dElev","dQnh","dOat","dRwy","dWd","dWv","dSurf","dFlaps","dSlope","dAvRoll","dAv15",
     "aElev","aQnh","aOat","aRwy","aWd","aWv","aSurf","aSlope","aAvRoll","aAv15",
     "crzAlt","descRate","descGs","patAlt","atis","enroute",
     "gafor","wxBrief","atcBrief","briefValid",
@@ -1413,6 +1421,7 @@ function applyState(s){
   // backfill perf flag for profiles saved before this field existed
   Object.values(PROF).forEach(p=>{if(!p.perf)p.perf=(""+p.type).toUpperCase().includes("172R")?"R":"S";});
   fillAcSelect();
+  if($("dFlaps"))$("dFlaps").value="0";   // Plaene ohne gespeicherte Startklappen: immer konservativ 0° (nicht die aktuelle Auswahl erben)
   if(s&&s.fields)for(const k in s.fields){if($(k)!=null)$(k).value=s.fields[k];}
   if($("fuelLb"))$("fuelLb").value=$("fuelL").value; // mirror fuel-on-board into fuel block
   $("navbody").innerHTML="";
