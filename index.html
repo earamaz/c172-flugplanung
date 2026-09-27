@@ -93,6 +93,9 @@
     padding:7px 10px;margin:8px 0 4px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-weight:600;font-size:13px}
   .folderhead:hover{border-color:var(--accent2)}
   .folderbody{padding-left:10px;border-left:2px solid var(--line);margin-left:4px}
+  .planrow[draggable="true"]{cursor:grab}
+  .folderhead.dropover,.folderbody.dropover{outline:2px dashed var(--accent2);outline-offset:-2px;border-radius:8px}
+  .fdel{color:#ff8f8f;background:transparent;border:none;font-size:12px;padding:0 2px;cursor:pointer}
   /* Ordner-Auswahl-Dialog */
   .fmodal{position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px}
   .fmodal-box{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
@@ -336,6 +339,7 @@
   <div class="card noprint" id="plansCard">
     <h2>Meine Flugpläne</h2>
     <button class="primary" onclick="savePlanAs()">＋ Aktuellen Plan speichern</button>
+    <button onclick="createFolder()" title="Leeren Ordner anlegen — Pläne dann per Drag &amp; Drop (oder „Ordner“-Knopf) hineinschieben">＋ Neuer Ordner</button>
     <div id="plansList" style="margin-top:10px"></div>
     <div class="note" style="margin-top:6px">Speichert den kompletten Plan mit Datum/Uhrzeit <b>in der Cloud</b> — auf allen Geräten mit deinem Login verfügbar. Der <b>● aktive</b> Plan wird von der <b>Speichern</b>-Taste oben überschrieben — „＋ Aktuellen Plan speichern" legt einen neuen an.</div>
   </div>
@@ -1448,7 +1452,7 @@ let fmResolve=null;
 function askFolder(cur){
   return new Promise(res=>{
     fmResolve=res;
-    const names=[...new Set(loadPlans().map(p=>(p.folder||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"));
+    const names=allFolderNames().sort((a,b)=>a.localeCompare(b,"de"));
     const list=$("fmList"); list.innerHTML="";
     const mk=(label,val)=>{const b=document.createElement("button");b.type="button";b.className="fmodal-item";b.textContent=label;b.onclick=()=>fmDone(val);return b;};
     list.appendChild(mk("Ohne Ordner",""));
@@ -1470,6 +1474,45 @@ function fmCancel(){ fmDone(null); }
 $("folderModal").addEventListener("click",e=>{ if(e.target.id==="folderModal")fmCancel(); });
 $("fmNew").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();fmOk();} else if(e.key==="Escape"){e.preventDefault();fmCancel();} });
 async function movePlan(id){const a=loadPlans(),p=a.find(x=>x.id===id); if(!p)return; const f=await askFolder(p.folder); if(f===null)return; p.folder=f; savePlansArr(a); renderPlans();}
+// ---- Manuell angelegte Ordner (dürfen leer sein) ----
+// Lokal: localStorage "c172planner.folders"; Cloud überschreibt addFolderPersist/removeFolderPersist (arrayUnion/arrayRemove) + synct via meta/folders-Doc.
+let EXTRA_FOLDERS=(function(){try{return JSON.parse(localStorage.getItem("c172planner.folders"))||[]}catch(e){return[]}})();
+function persistLocalFolders(){try{localStorage.setItem("c172planner.folders",JSON.stringify(EXTRA_FOLDERS));}catch(e){}}
+// Einzel-Operationen (Cloud überschreibt sie mit arrayUnion/arrayRemove — konfliktfrei über Geräte)
+function addFolderPersist(n){ EXTRA_FOLDERS.push(n); persistLocalFolders(); renderPlans(); }
+function removeFolderPersist(n){ EXTRA_FOLDERS=EXTRA_FOLDERS.filter(x=>x!==n); persistLocalFolders(); renderPlans(); }
+function allFolderNames(){
+  const fromPlans=loadPlans().map(p=>(p.folder||"").trim()).filter(Boolean);
+  return [...new Set(fromPlans.concat(EXTRA_FOLDERS.map(n=>(n||"").trim()).filter(Boolean)))];
+}
+function createFolder(){
+  let n=prompt("Name des neuen Ordners (z.B. Datum oder Trip):"); if(n===null)return;
+  n=n.trim(); if(!n)return;
+  if(allFolderNames().some(x=>x.toLowerCase()===n.toLowerCase())){alert("Ordner „"+n+"“ existiert schon.");return;}
+  addFolderPersist(n);
+}
+function deleteFolder(name){   // nur für LEERE manuelle Ordner (Button erscheint nur dann)
+  removeFolderPersist(name);
+}
+// ---- Drag & Drop: Planzeile auf Ordnerkopf/-bereich ziehen ----
+let dragPlanId=null;
+function planDragStart(e,id){ dragPlanId=id; try{e.dataTransfer.setData("text/plain",id); e.dataTransfer.effectAllowed="move";}catch(_){} }
+function folderDragOver(e){ e.preventDefault(); try{e.dataTransfer.dropEffect="move";}catch(_){} e.currentTarget.classList.add("dropover"); }
+function folderDragLeave(e){ if(e.relatedTarget&&e.currentTarget.contains(e.relatedTarget))return; e.currentTarget.classList.remove("dropover"); }
+// nach JEDEM Drag (auch abgebrochen per Esc) die gemerkte Plan-ID löschen — sonst könnte ein
+// späterer Fremd-Drop (z.B. Datei aus dem Finder) den zuletzt gezogenen Plan verschieben
+document.addEventListener("dragend",()=>{dragPlanId=null;});
+function folderDrop(e,f){
+  e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("dropover");
+  let id=""; try{id=e.dataTransfer.getData("text/plain");}catch(_){}
+  id=id||dragPlanId; dragPlanId=null; if(!id)return;
+  setPlanFolder(id,f);
+}
+function setPlanFolder(id,f){   // ohne Dialog (für Drag&Drop); Cloud-Version wird in activateCloud registriert
+  const a=loadPlans(),p=a.find(x=>x.id===id); if(!p)return;
+  f=(f||"").trim(); if((p.folder||"").trim()===f)return;
+  p.folder=f; savePlansArr(a); renderPlans();
+}
 // „Name (Kopie)“, bei Kollision „Name (Kopie 2)“, „(Kopie 3)“ …
 function uniqueCopyName(base,names){
   const lower=names.map(n=>(n||"").toLowerCase());
@@ -1510,7 +1553,7 @@ async function savePlanAs(){
   savePlansArr(a); setActive(entry.id); flash("Plan gespeichert ✓");
 }
 function planRowHtml(p){
-  return `<div class="planrow${p.id===activePlanId?' planactive':''}">
+  return `<div class="planrow${p.id===activePlanId?' planactive':''}" draggable="true" ondragstart="planDragStart(event,'${p.id}')">
     <div><b>${escHtml(p.name)}</b> ${p.id===activePlanId?'<span class="mini activebadge">● aktiv</span>':''} <span class="mini">· ${escHtml((p.from||"?")+"→"+(p.to||"?"))} · ${escHtml(p.ac||"")}</span><br>
       <span class="mini">zuletzt gespeichert: ${fmtWhen(p.savedAt)}</span></div>
     <div class="planbtns"><button onclick="loadPlan('${p.id}')">Laden</button><button title="Kopie dieses Plans anlegen — „${escHtml(p.name)} (Kopie)“" onclick="dupPlan('${p.id}')">Duplizieren</button><button title="Plan umbenennen" onclick="renamePlan('${p.id}')">Umbenennen</button><button title="In Ordner verschieben" onclick="movePlan('${p.id}')">Ordner</button><button class="pdel" onclick="deletePlan('${p.id}')">Löschen</button></div>
@@ -1518,25 +1561,32 @@ function planRowHtml(p){
 }
 function renderPlans(){
   const a=loadPlans(), box=$("plansList"); if(!box)return;
-  if(!a.length){box.innerHTML='<div class="mini">Noch keine Pläne gespeichert. Aktuellen Plan mit „＋ Aktuellen Plan speichern" ablegen.</div>';return;}
-  // nach Ordner gruppieren
+  // nach Ordner gruppieren; manuell angelegte (evtl. leere) Ordner ergänzen
   const groups={};
   a.forEach(p=>{const f=(p.folder||"").trim(); (groups[f]=groups[f]||[]).push(p);});
+  EXTRA_FOLDERS.map(n=>(n||"").trim()).filter(Boolean).forEach(n=>{groups[n]=groups[n]||[];});
+  // sobald es echte Ordner gibt: „Ohne Ordner" immer als Drop-Ziel anbieten (Plan aus Ordner herausziehen)
+  if(Object.keys(groups).some(f=>f!=="")) groups[""]=groups[""]||[];
+  if(!Object.keys(groups).length){box.innerHTML='<div class="mini">Noch keine Pläne gespeichert. Aktuellen Plan mit „＋ Aktuellen Plan speichern" ablegen — oder mit „＋ Neuer Ordner" schon mal Ordner anlegen.</div>';return;}
   Object.values(groups).forEach(g=>g.sort((x,y)=>(y.savedAt||"").localeCompare(x.savedAt||"")));
-  // Ordner-Reihenfolge: neuester Plan im Ordner zuerst; „ohne Ordner" (leer) ans Ende
+  // Reihenfolge: leere (neue) Ordner zuerst, dann Ordner nach neuestem Plan, „Ohne Ordner" ans Ende
   const names=Object.keys(groups).sort((f1,f2)=>{
-    if(f1==="")return 1; if(f2==="")return -1;
-    return (groups[f2][0].savedAt||"").localeCompare(groups[f1][0].savedAt||"");
+    const rank=f=> f==="" ? 2 : (groups[f].length ? 1 : 0);
+    if(rank(f1)!==rank(f2)) return rank(f1)-rank(f2);
+    if(rank(f1)===1) return (groups[f2][0].savedAt||"").localeCompare(groups[f1][0].savedAt||"");
+    return f1.localeCompare(f2,"de");
   });
   const collapsed=getCollapsed();
   // Wenn es keine echten Ordner gibt -> einfach flach anzeigen (kein „ohne Ordner"-Kopf)
   if(names.length===1 && names[0]===""){ box.innerHTML=groups[""].map(planRowHtml).join(""); return; }
+  const dnd=`ondragover="folderDragOver(event)" ondragleave="folderDragLeave(event)" ondrop="folderDrop(event,this.dataset.f)"`;
   box.innerHTML=names.map(f=>{
     const list=groups[f], isCol=collapsed.includes(f);
     const label=f?(""+escHtml(f)):"Ohne Ordner";
-    return `<div class="folderhead" data-f="${escHtml(f)}" onclick="toggleFolder(this.dataset.f)">
-      <span>${isCol?"▸":"▾"} ${label}</span><span class="mini">${list.length}</span></div>`
-      + (isCol?"":`<div class="folderbody">${list.map(planRowHtml).join("")}</div>`);
+    const del=(!list.length&&f)?` <button class="fdel" title="Leeren Ordner entfernen" onclick="event.stopPropagation();deleteFolder(this.closest('.folderhead').dataset.f)">✕</button>`:"";
+    return `<div class="folderhead" data-f="${escHtml(f)}" onclick="toggleFolder(this.dataset.f)" ${dnd}>
+      <span>${isCol?"▸":"▾"} ${label}</span><span class="mini">${list.length}${del}</span></div>`
+      + (isCol?"":`<div class="folderbody" data-f="${escHtml(f)}" ${dnd}>${list.length?list.map(planRowHtml).join(""):'<div class="mini" style="padding:6px 2px">leer — Plan hierher ziehen (oder „Ordner"-Knopf am Plan)</div>'}</div>`);
   }).join("");
 }
 function loadPlan(id){
@@ -1610,7 +1660,7 @@ renderPlans();
   const db=firebase.firestore();
   db.enablePersistence({synchronizeTabs:true}).catch(()=>{});   // Offline-Cache
 
-  let plansCol=null, unsub=null, PLANS=[];
+  let plansCol=null, unsub=null, PLANS=[], metaFoldersDoc=null, unsubFolders=null;
 
   // ---- Firestore-Versionen der Plan-Funktionen (überschreiben die lokalen) ----
   function fbLoadPlans(){ return PLANS.slice(); }
@@ -1683,10 +1733,50 @@ renderPlans();
     try{ await plansCol.doc(id).update({name:n}); }
     catch(e){ alert("Umbenennen fehlgeschlagen: "+(e&&e.message)); }
   }
+  async function fbSetPlanFolder(id,f){
+    const p=PLANS.find(x=>x.id===id); if(!p)return;
+    f=(f||"").trim(); if(((p.folder||"")+"").trim()===f)return;
+    try{ await plansCol.doc(id).update({folder:f}); }
+    catch(e){ alert("Verschieben fehlgeschlagen: "+(e&&e.message)); }
+  }
+  // Ordner-Änderungen als Einzel-Operationen (arrayUnion/arrayRemove) — kein Ganz-Array-Überschreiben,
+  // damit parallel arbeitende Geräte sich nicht gegenseitig Ordner wegputzen.
+  async function fbAddFolder(n){
+    EXTRA_FOLDERS.push(n); renderPlans();
+    try{ await metaFoldersDoc.set({names:firebase.firestore.FieldValue.arrayUnion(n)},{merge:true}); }
+    catch(e){ alert("Ordner speichern fehlgeschlagen: "+(e&&e.message)); }
+  }
+  async function fbRemoveFolder(n){
+    EXTRA_FOLDERS=EXTRA_FOLDERS.filter(x=>x!==n); renderPlans();
+    try{ await metaFoldersDoc.set({names:firebase.firestore.FieldValue.arrayRemove(n)},{merge:true}); }
+    catch(e){ alert("Ordner entfernen fehlgeschlagen: "+(e&&e.message)); }
+  }
 
   function activateCloud(user){
     plansCol=db.collection("c172Plans").doc(user.uid).collection("plans");
+    metaFoldersDoc=db.collection("c172Plans").doc(user.uid).collection("meta").doc("folders");
     loadPlans=fbLoadPlans; savePlanAs=fbSavePlanAs; saveState=fbSaveState; loadPlan=fbLoadPlan; deletePlan=fbDeletePlan; movePlan=fbMovePlan; dupPlan=fbDupPlan; renamePlan=fbRenamePlan;
+    setPlanFolder=fbSetPlanFolder; addFolderPersist=fbAddFolder; removeFolderPersist=fbRemoveFolder;
+    // manuelle Ordner aus der Cloud live syncen (alle Geräte)
+    if(unsubFolders)unsubFolders();
+    let foldersFirstSync=true;
+    unsubFolders=metaFoldersDoc.onSnapshot(d=>{
+      const cloud=(d.exists&&d.data()&&Array.isArray(d.data().names))?d.data().names:[];
+      if(foldersFirstSync){
+        foldersFirstSync=false;
+        // vor dem Login lokal angelegte Ordner NICHT verwerfen, sondern in die Cloud mergen
+        const localOnly=EXTRA_FOLDERS.map(n=>(n||"").trim()).filter(n=>n&&!cloud.includes(n));
+        EXTRA_FOLDERS=[...new Set(cloud.concat(localOnly))];
+        if(localOnly.length){
+          metaFoldersDoc.set({names:firebase.firestore.FieldValue.arrayUnion(...localOnly)},{merge:true})
+            .catch(e=>console.warn("Ordner-Upload:",e&&e.message));
+        }
+      } else {
+        EXTRA_FOLDERS=cloud;
+      }
+      try{localStorage.setItem("c172planner.folders",JSON.stringify(EXTRA_FOLDERS));}catch(e){}
+      renderPlans();
+    }, err=>console.warn("Ordner-Sync:",err&&err.message));
     subscribe();
     document.getElementById("authOverlay").style.display="none";
     // Abmelden-Button in die Toolbar
